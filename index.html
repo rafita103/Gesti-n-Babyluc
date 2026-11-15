@@ -85,6 +85,9 @@
         <span id="sidebar-user-email" class="truncate font-medium text-gray-700">Sin sesión iniciada</span>
         <button id="sidebar-btn-logout" type="button" class="hidden text-red-600 hover:underline font-semibold shrink-0 cursor-pointer">Salir</button>
       </div>
+      <button id="sidebar-btn-login" type="button" class="w-full px-3 py-1.5 rounded-lg bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-xs cursor-pointer transition">
+        Iniciar sesión
+      </button>
       <div class="text-[10px] text-gray-400">Sincronización en la nube (Firestore)</div>
     </div>
   </aside>
@@ -104,7 +107,7 @@
         <button id="btn-header-sync-local" type="button" class="hidden px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-xs font-semibold cursor-pointer">
           ☁️ Subir datos locales (<span id="header-pending-count">0</span>)
         </button>
-        <button id="btn-header-login" type="button" class="hidden px-3 py-1.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 text-xs font-semibold cursor-pointer">
+        <button id="btn-header-login" type="button" class="px-3 py-1.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 text-xs font-semibold cursor-pointer">
           Iniciar sesión
         </button>
         <button id="btn-open-global-search" type="button" title="Búsqueda global (Ctrl+K)"
@@ -1887,11 +1890,14 @@
       <button id="auth-btn-submit" type="submit" class="w-full px-5 py-3 rounded-2xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-bold text-sm shadow-xs transition cursor-pointer">
         Entrar
       </button>
+      <button id="auth-btn-skip" type="button" class="w-full px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium text-xs transition cursor-pointer">
+        Seguir sin iniciar sesión (solo local)
+      </button>
     </form>
   </div>
 
   <!-- ==================== SCRIPTS DE LA APLICACIÓN ==================== -->
-  <script type="module" src="/src/main.tsx"></script>
-  <script src="/babyluc-app.js"></script>
+  <script type="module" src="./src/main.tsx"></script>
+  <script src="./babyluc-app.js"></script>
 </body>
 </html>

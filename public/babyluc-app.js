@@ -1949,6 +1949,9 @@ const InvoiceScannerModule = (() => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pages: pagesPayload })
       });
+      if (resp.status === 404 || resp.status === 405) {
+        throw new Error('El escaneo automático con IA requiere el servidor activo (Node/AI Studio). En un despliegue estático como GitHub Pages puedes registrar la factura manualmente en Proveedores.');
+      }
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(json?.error || `HTTP ${resp.status}`);
       extracted = json;
@@ -6581,6 +6584,7 @@ function bindCsvExports() {
 // ==================== 12. SINCRONIZACIÓN EN LA NUBE (FIREBASE) ====================
 const CloudSyncModule = (() => {
   let prevUid = null;
+  let gateDismissed = false;
 
   function waitForBridge(timeoutMs = 5000) {
     if (window.FirebaseBridge) return Promise.resolve(window.FirebaseBridge);
@@ -6614,10 +6618,17 @@ const CloudSyncModule = (() => {
     await recalcularAlertasStock(false);
   }
 
+  function openAuthGate() {
+    gateDismissed = false;
+    document.getElementById('auth-gate-error')?.classList.add('hidden');
+    document.getElementById('auth-gate-screen')?.classList.remove('hidden');
+  }
+
   function applyStatusUI(status) {
     const gate = document.getElementById('auth-gate-screen');
     const gateErr = document.getElementById('auth-gate-error');
     const sbEmail = document.getElementById('sidebar-user-email');
+    const sbLogin = document.getElementById('sidebar-btn-login');
     const sbOut = document.getElementById('sidebar-btn-logout');
     const hdLogin = document.getElementById('btn-header-login');
     const hdSync = document.getElementById('btn-header-sync-local');
@@ -6628,37 +6639,42 @@ const CloudSyncModule = (() => {
     if (!status.ready) return;
 
     if (!status.user) {
-      gate.classList.remove('hidden');
-      gateErr.classList.add('hidden');
-      sbEmail.textContent = 'Sin sesión iniciada';
-      sbOut.classList.add('hidden');
-      hdLogin.classList.remove('hidden');
-      hdSync.classList.add('hidden');
-      ajStatus.textContent = 'Inicia sesión para sincronizar entre móvil y ordenador.';
-      ajOut.classList.add('hidden');
+      if (!gateDismissed) gate?.classList.remove('hidden');
+      gateErr?.classList.add('hidden');
+      if (sbEmail) sbEmail.textContent = 'Sin sesión iniciada';
+      sbLogin?.classList.remove('hidden');
+      sbOut?.classList.add('hidden');
+      hdLogin?.classList.remove('hidden');
+      hdSync?.classList.add('hidden');
+      if (ajStatus) ajStatus.textContent = 'Inicia sesión para sincronizar entre móvil y ordenador.';
+      ajOut?.classList.add('hidden');
       prevUid = null;
       return;
     }
 
-    gate.classList.add('hidden');
-    gateErr.classList.add('hidden');
+    gateDismissed = false;
+    gate?.classList.add('hidden');
+    gateErr?.classList.add('hidden');
     const label = status.user.email === 'admin@babyluc.app' ? 'admin' : (status.user.email || 'Conectado');
-    sbEmail.textContent = status.syncing ? `${label} · Sincronizando...` : `Usuario: ${label}`;
-    sbOut.classList.remove('hidden');
-    hdLogin.classList.add('hidden');
-    ajOut.classList.remove('hidden');
-    ajStatus.textContent = status.syncing
-      ? `Conectado (${label}) · Sincronizando con la nube...`
-      : `Sincronizado en tiempo real (${label})`;
-
-    if (status.pendingLocalCount > 0) {
-      hdCount.textContent = String(status.pendingLocalCount);
-      hdSync.classList.remove('hidden');
-    } else {
-      hdSync.classList.add('hidden');
+    if (sbEmail) sbEmail.textContent = status.syncing ? `${label} · Sincronizando...` : `Usuario: ${label}`;
+    sbLogin?.classList.add('hidden');
+    sbOut?.classList.remove('hidden');
+    hdLogin?.classList.add('hidden');
+    ajOut?.classList.remove('hidden');
+    if (ajStatus) {
+      ajStatus.textContent = status.syncing
+        ? `Conectado (${label}) · Sincronizando con la nube...`
+        : `Sincronizado en tiempo real (${label})`;
     }
 
-    if (status.lastError) {
+    if (status.pendingLocalCount > 0) {
+      if (hdCount) hdCount.textContent = String(status.pendingLocalCount);
+      hdSync?.classList.remove('hidden');
+    } else {
+      hdSync?.classList.add('hidden');
+    }
+
+    if (status.lastError && ajStatus) {
       ajStatus.textContent = `Error de sincronización: ${status.lastError}`;
     }
 
@@ -6670,20 +6686,24 @@ const CloudSyncModule = (() => {
   }
 
   async function init() {
-    const bridge = await waitForBridge();
-    if (!bridge) return;
-
     const doCredentialsLogin = async (username, password) => {
       const gateErr = document.getElementById('auth-gate-error');
-      gateErr.classList.add('hidden');
+      gateErr?.classList.add('hidden');
       showGlobalSpinner('Iniciando sesión...');
       try {
-        await bridge.signInWithCredentials(username, password);
-        document.getElementById('auth-password').value = '';
+        const activeBridge = window.FirebaseBridge || await waitForBridge(3500);
+        if (!activeBridge) {
+          throw new Error('El módulo de Firebase no está disponible todavía. Revisa tu conexión o recarga la página.');
+        }
+        await activeBridge.signInWithCredentials(username, password);
+        const passEl = document.getElementById('auth-password');
+        if (passEl) passEl.value = '';
       } catch (err) {
         const msg = err?.message || 'Usuario o contraseña incorrectos';
-        gateErr.textContent = msg;
-        gateErr.classList.remove('hidden');
+        if (gateErr) {
+          gateErr.textContent = msg;
+          gateErr.classList.remove('hidden');
+        }
         showToast(msg, 'error');
       } finally {
         hideGlobalSpinner();
@@ -6691,14 +6711,18 @@ const CloudSyncModule = (() => {
     };
 
     const doSignOut = async () => {
-      await bridge.signOutUser();
+      const activeBridge = window.FirebaseBridge;
+      if (!activeBridge) return;
+      await activeBridge.signOutUser();
       showToast('Sesión cerrada', 'success');
     };
 
     const doMergeLocal = async () => {
+      const activeBridge = window.FirebaseBridge;
+      if (!activeBridge) return showToast('Inicia sesión primero para sincronizar con la nube', 'warning');
       showGlobalSpinner('Subiendo datos locales a la nube...');
       try {
-        const count = await bridge.mergeLocalIntoCloud();
+        const count = await activeBridge.mergeLocalIntoCloud();
         await refreshVisibleViews();
         showToast(count > 0 ? `${count} registro(s) sincronizados con la nube` : 'Todos los datos ya estaban en la nube', 'success');
       } catch (err) {
@@ -6708,19 +6732,31 @@ const CloudSyncModule = (() => {
       }
     };
 
-    document.getElementById('auth-login-form').addEventListener('submit', (e) => {
+    document.getElementById('auth-login-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const u = document.getElementById('auth-username').value;
-      const p = document.getElementById('auth-password').value;
+      const u = document.getElementById('auth-username')?.value || '';
+      const p = document.getElementById('auth-password')?.value || '';
       doCredentialsLogin(u, p);
     });
-    document.getElementById('btn-header-login').addEventListener('click', () => {
-      document.getElementById('auth-gate-screen').classList.remove('hidden');
+    document.getElementById('auth-btn-skip')?.addEventListener('click', () => {
+      gateDismissed = true;
+      document.getElementById('auth-gate-screen')?.classList.add('hidden');
     });
-    document.getElementById('sidebar-btn-logout').addEventListener('click', doSignOut);
-    document.getElementById('aj-btn-logout').addEventListener('click', doSignOut);
-    document.getElementById('btn-header-sync-local').addEventListener('click', doMergeLocal);
-    document.getElementById('aj-btn-sync-local').addEventListener('click', doMergeLocal);
+    document.getElementById('btn-header-login')?.addEventListener('click', openAuthGate);
+    document.getElementById('sidebar-btn-login')?.addEventListener('click', openAuthGate);
+    document.getElementById('sidebar-btn-logout')?.addEventListener('click', doSignOut);
+    document.getElementById('aj-btn-logout')?.addEventListener('click', doSignOut);
+    document.getElementById('btn-header-sync-local')?.addEventListener('click', doMergeLocal);
+    document.getElementById('aj-btn-sync-local')?.addEventListener('click', doMergeLocal);
+
+    const bridge = await waitForBridge(5000);
+    if (!bridge) {
+      const sbEmail = document.getElementById('sidebar-user-email');
+      if (sbEmail) sbEmail.textContent = 'Sin sesión iniciada (local)';
+      document.getElementById('sidebar-btn-login')?.classList.remove('hidden');
+      document.getElementById('btn-header-login')?.classList.remove('hidden');
+      return;
+    }
 
     await bridge.attachDexie(db, {
       onRemoteChange: async () => {
@@ -6733,31 +6769,38 @@ const CloudSyncModule = (() => {
     applyStatusUI(bridge.getStatus());
   }
 
-  return { init, refreshVisibleViews };
+  return { init, refreshVisibleViews, openAuthGate };
 })();
 
 // ==================== 13. ARRANQUE DE LA APLICACIÓN ====================
-document.addEventListener('DOMContentLoaded', async () => {
+async function bootBabylucApp() {
   document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => navigateTo(b.dataset.nav)));
 
-  await AjustesModule.ensureDefault();
+  try { await AjustesModule.ensureDefault(); } catch (e) { console.error(e); }
   VariantComboModule.init();
-  await VariantComboModule.refreshCatalog();
+  try { await VariantComboModule.refreshCatalog(); } catch (e) { console.error(e); }
   AjustesModule.init();
   StockModule.init();
   InvoiceScannerModule.init();
   ClientesModule.init();
   ProveedoresModule.init();
-  await PedidosModule.init();
+  try { await PedidosModule.init(); } catch (e) { console.error(e); }
   DocumentosModule.init();
   BalancesModule.init();
-  await ImpuestosModule.init();
+  try { await ImpuestosModule.init(); } catch (e) { console.error(e); }
   GlobalSearchModule.init();
   PinAndAjustesExtra.init();
   bindCsvExports();
 
-  await CloudSyncModule.init();
-  await PinAndAjustesExtra.checkLockOnBoot();
+  // Arrancar UI inmediatamente sin esperar al timeout de Firebase si la red va lenta
+  try { await PinAndAjustesExtra.checkLockOnBoot(); } catch (e) { console.error(e); }
   navigateTo('stock');
-  await recalcularAlertasStock(true);
-});
+  CloudSyncModule.init().catch(err => console.error('CloudSync init error:', err));
+  try { await recalcularAlertasStock(true); } catch (e) { console.error(e); }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootBabylucApp);
+} else {
+  bootBabylucApp();
+}
