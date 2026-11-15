@@ -1,0 +1,1897 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>babyluc · Gestión de Tienda</title>
+  <meta name="description" content="Gestión integral para tienda de ropa de bebé, niño y mujer: stock, pedidos, clientes, facturación y Modelo 303." />
+  <meta property="og:title" content="babyluc · Gestión de Tienda" />
+  <meta property="og:description" content="Gestión integral para tienda de ropa de bebé, niño y mujer: stock, pedidos, clientes, facturación y Modelo 303." />
+  <meta property="og:type" content="website" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sage: { 50: '#F5F7F4', 200: '#D6DDD3', 300: '#B6BEB2', 500: '#727D6E' }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Dexie.js CDN -->
+  <script src="https://unpkg.com/dexie@4.0.10/dist/dexie.min.js"></script>
+  <!-- jsPDF + AutoTable CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <!-- PDF.js 3.11 UMD CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <style>
+    body { background-color: #F9FAFB; color: #1F2937; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .brand-logo { font-family: Georgia, 'Times New Roman', serif; font-style: italic; }
+    @media (max-width: 639px) {
+      .fixed[id^="modal-"] { padding: 0 !important; }
+      .fixed[id^="modal-"] > div {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        min-height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row bg-[#F9FAFB] text-[#1F2937]">
+
+  <!-- ==================== SIDEBAR ESCRITORIO ==================== -->
+  <aside class="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-white border-r border-gray-200 z-30">
+    <div class="h-16 px-6 flex items-center border-b border-gray-100">
+      <span class="brand-logo text-3xl font-bold text-[#727D6E] tracking-tight">babyluc</span>
+    </div>
+    <nav class="flex-1 px-3 py-5 space-y-1.5" aria-label="Menú principal">
+      <button type="button" data-nav="stock" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
+        <span>Stock</span>
+        <span class="nav-stock-badge hidden ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-600 text-white">0</span>
+      </button>
+      <button type="button" data-nav="pedidos" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z"/></svg>
+        <span>Pedidos</span>
+      </button>
+      <button type="button" data-nav="clientes" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg>
+        <span>Clientes</span>
+      </button>
+      <button type="button" data-nav="proveedores" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
+        <span>Proveedores</span>
+      </button>
+      <button type="button" data-nav="balances" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>
+        <span>Balances</span>
+      </button>
+      <button type="button" data-nav="ajustes" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+        <span>Ajustes</span>
+      </button>
+    </nav>
+    <div id="sidebar-sync-box" class="p-4 border-t border-gray-100 space-y-2 text-[11px] text-gray-500">
+      <div class="flex items-center justify-between gap-2">
+        <span id="sidebar-user-email" class="truncate font-medium text-gray-700">Sin sesión iniciada</span>
+        <button id="sidebar-btn-logout" type="button" class="hidden text-red-600 hover:underline font-semibold shrink-0 cursor-pointer">Salir</button>
+      </div>
+      <div class="text-[10px] text-gray-400">Sincronización en la nube (Firestore)</div>
+    </div>
+  </aside>
+
+  <!-- ==================== CONTENIDO PRINCIPAL ==================== -->
+  <div class="flex-1 md:pl-64 flex flex-col min-h-screen pb-20 md:pb-6">
+
+    <!-- HEADER SUPERIOR -->
+    <header class="sticky top-0 z-20 h-16 bg-white/95 backdrop-blur border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 md:hidden">
+        <span class="brand-logo text-2xl font-bold text-[#727D6E]">babyluc</span>
+      </div>
+      <h1 id="mobile-section-title" class="text-sm font-bold text-gray-800 md:hidden">Stock</h1>
+      <div class="hidden md:block text-xs text-gray-400 font-medium" id="desktop-breadcrumb">Panel de gestión</div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-header-sync-local" type="button" class="hidden px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-xs font-semibold cursor-pointer">
+          ☁️ Subir datos locales (<span id="header-pending-count">0</span>)
+        </button>
+        <button id="btn-header-login" type="button" class="hidden px-3 py-1.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 text-xs font-semibold cursor-pointer">
+          Iniciar sesión
+        </button>
+        <button id="btn-open-global-search" type="button" title="Búsqueda global (Ctrl+K)"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs text-gray-600 cursor-pointer">
+          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6.05 6.05a7.5 7.5 0 0 0 10.6 10.6Z"/></svg>
+          <span class="hidden sm:inline">Buscar...</span>
+          <kbd class="hidden md:inline px-1.5 py-0.5 text-[10px] bg-white border border-gray-200 rounded">Ctrl+K</kbd>
+        </button>
+      </div>
+    </header>
+
+    <!-- ÁREA DE VISTAS SPA -->
+    <main class="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+
+      <!-- ==================== 1. SECCIÓN: STOCK ==================== -->
+      <section id="view-stock" class="space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Stock</h2>
+            <p class="text-sm text-gray-500">Catálogo, variantes, tarifas e importación de facturas con IA.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button id="btn-escanear-factura" type="button" class="px-4 py-2 rounded-xl border border-[#B6BEB2] bg-[#F5F7F4] hover:bg-[#EAEEE9] text-gray-900 font-semibold text-sm cursor-pointer">
+              📄 Escanear factura
+            </button>
+            <button id="btn-nuevo-articulo" type="button" class="px-4 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm shadow-xs cursor-pointer">
+              + Nuevo artículo
+            </button>
+          </div>
+        </div>
+
+        <!-- Pestañas Stock -->
+        <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
+          <button type="button" data-stock-tab="articulos" class="stock-tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-[#F5F7F4] text-gray-900 border border-[#B6BEB2] cursor-pointer">Artículos</button>
+          <button type="button" data-stock-tab="precios" class="stock-tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 cursor-pointer">Precios</button>
+          <button type="button" data-stock-tab="categorias" class="stock-tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 cursor-pointer">Categorías</button>
+          <button type="button" data-stock-tab="movimientos" class="stock-tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 cursor-pointer">Movimientos</button>
+        </div>
+
+        <!-- Tab Artículos -->
+        <div id="stock-tab-articulos" class="space-y-4">
+          <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+            <input id="stock-search" type="text" placeholder="Buscar por nombre, código o alias..." class="lg:col-span-4 px-3.5 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+            <select id="stock-filter-cat" class="lg:col-span-2 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white"><option value="">Todas las categorías</option></select>
+            <select id="stock-filter-prov" class="lg:col-span-2 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white"><option value="">Todos los proveedores</option></select>
+            <button id="stock-filter-low" type="button" class="lg:col-span-2 px-3 py-2 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50 hover:bg-amber-50 text-gray-700 cursor-pointer">⚠️ Stock bajo</button>
+            <button id="btn-export-stock" type="button" class="lg:col-span-2 px-3 py-2 text-xs font-semibold rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer">⬇ Exportar stock</button>
+          </div>
+          <div id="stock-articulos-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+          <div id="stock-articulos-empty" class="hidden bg-white border border-gray-200 rounded-2xl py-12 text-center text-sm text-gray-400">No hay artículos que coincidan con el filtro.</div>
+        </div>
+
+        <!-- Tab Precios -->
+        <div id="stock-tab-precios" class="hidden space-y-4">
+          <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs">
+            <input id="precios-search" type="text" placeholder="Filtrar tabla de precios por nombre, código o alias..." class="w-full sm:w-96 px-3.5 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+          </div>
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                <tr>
+                  <th class="px-3 py-3 text-left">Nombre</th>
+                  <th class="px-3 py-3 text-left">Alias</th>
+                  <th class="px-3 py-3 text-left">Proveedor</th>
+                  <th class="px-3 py-3 text-right">P. Compra</th>
+                  <th class="px-3 py-3 text-right">P. Venta (c/IVA)</th>
+                  <th class="px-3 py-3 text-right">Margen €</th>
+                  <th class="px-3 py-3 text-right">Margen %</th>
+                  <th class="px-3 py-3 text-center">IVA</th>
+                </tr>
+              </thead>
+              <tbody id="precios-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab Categorías -->
+        <div id="stock-tab-categorias" class="hidden space-y-4">
+          <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs flex flex-wrap gap-2">
+            <input id="cat-new-name" type="text" placeholder="Nombre de nueva categoría (ej: Bebé 0-24m)" class="flex-1 min-w-[200px] px-3.5 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+            <button id="cat-btn-add" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">+ Crear categoría</button>
+          </div>
+          <div id="categorias-list" class="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100 shadow-xs"></div>
+        </div>
+
+        <!-- Tab Movimientos -->
+        <div id="stock-tab-movimientos" class="hidden space-y-4">
+          <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+            <input id="mov-search" type="text" placeholder="Buscar por artículo, variante o referencia..." class="lg:col-span-4 px-3.5 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+            <select id="mov-filter-tipo" class="lg:col-span-2 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white">
+              <option value="">Todos los tipos</option>
+              <option value="compra">Compra / Factura</option>
+              <option value="venta">Venta / Pedido</option>
+              <option value="devolucion">Devolución</option>
+              <option value="cancelacion">Cancelación pedido</option>
+              <option value="ajuste_manual">Ajuste manual</option>
+              <option value="eliminacion_pedido">Eliminación pedido</option>
+              <option value="baja_articulo">Baja de artículo</option>
+            </select>
+            <input id="mov-desde" type="date" class="lg:col-span-2 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white" />
+            <input id="mov-hasta" type="date" class="lg:col-span-2 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white" />
+            <button id="btn-export-movimientos" type="button" class="lg:col-span-2 px-3 py-2 text-xs font-semibold rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer">⬇ Exportar CSV</button>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="px-4 py-3 text-left">Fecha</th>
+                    <th class="px-4 py-3 text-left">Artículo</th>
+                    <th class="px-4 py-3 text-left">Variante</th>
+                    <th class="px-4 py-3 text-left">Tipo</th>
+                    <th class="px-4 py-3 text-center">Variación</th>
+                    <th class="px-4 py-3 text-center">Stock res.</th>
+                    <th class="px-4 py-3 text-left">Referencia / Nota</th>
+                  </tr>
+                </thead>
+                <tbody id="mov-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+              </table>
+            </div>
+            <div id="mov-empty" class="hidden py-10 text-center text-sm text-gray-400">No hay movimientos de stock registrados todavía.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 2. SECCIÓN: PEDIDOS ==================== -->
+      <section id="view-pedidos" class="hidden space-y-6">
+        <!-- SUBVISTA 1: LISTADO DE PEDIDOS -->
+        <div id="pedidos-subview-lista" class="space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Pedidos</h2>
+              <p class="text-sm text-gray-500">Gestiona ventas, estados de pago, envíos y stock reservado.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-lote-facturas" type="button" class="px-4 py-2.5 rounded-xl border border-[#B6BEB2] bg-[#F5F7F4] hover:bg-[#EAEEE9] text-sm font-semibold text-gray-900 cursor-pointer">🧾 Facturas PDF</button>
+              <button id="btn-export-pedidos" type="button" class="px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 cursor-pointer">⬇ Exportar</button>
+              <button id="btn-nuevo-pedido" type="button" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm shadow-xs cursor-pointer">+ Nuevo pedido</button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
+            <button id="pedidos-tab-todos" type="button" data-ped-tab="todos" class="ped-tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-[#F5F7F4] text-gray-900 border border-[#B6BEB2] cursor-pointer">📋 Todos los pedidos</button>
+            <button id="pedidos-tab-bolsas" type="button" data-ped-tab="bolsas" class="ped-tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 cursor-pointer">
+              <span>🛍️ Bolsas abiertas</span>
+              <span id="pedidos-bolsas-badge" class="px-1.5 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700 font-bold">0</span>
+            </button>
+          </div>
+
+          <div id="pedidos-todos-panel" class="space-y-5">
+            <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs grid grid-cols-1 md:grid-cols-12 gap-3">
+              <div class="md:col-span-4 relative">
+                <input id="pedidos-search" type="text" placeholder="Buscar BLC-, cliente, importe o fecha..." class="w-full px-3.5 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+              </div>
+              <div class="md:col-span-2">
+                <select id="pedidos-filter-estado" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white">
+                  <option value="">Todos los estados</option>
+                  <option value="pendiente_pago">Pendiente pago</option>
+                  <option value="pagado">Pagado</option>
+                  <option value="enviado">Enviado</option>
+                  <option value="completado">Completado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div class="md:col-span-2">
+                <select id="pedidos-filter-metodo" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white">
+                  <option value="">Cualquier pago</option>
+                  <option value="bizum">Bizum</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="efectivo">Efectivo</option>
+                </select>
+              </div>
+              <div class="md:col-span-2"><input id="pedidos-filter-desde" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white" /></div>
+              <div class="md:col-span-2 flex gap-2">
+                <input id="pedidos-filter-hasta" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white" />
+                <button id="pedidos-filter-clear" type="button" title="Limpiar" class="px-2.5 py-2 text-xs text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer">✕</button>
+              </div>
+            </div>
+
+            <div class="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-4 py-3 text-left">Nº pedido</th>
+                      <th class="px-4 py-3 text-left">Cliente</th>
+                      <th class="px-4 py-3 text-left"><button type="button" data-sort-pedido="fecha" class="inline-flex items-center gap-1 hover:text-gray-900 cursor-pointer">Fecha <span id="sort-icon-fecha">▼</span></button></th>
+                      <th class="px-4 py-3 text-left">Artículos</th>
+                      <th class="px-4 py-3 text-right"><button type="button" data-sort-pedido="total" class="inline-flex items-center gap-1 hover:text-gray-900 cursor-pointer">Total <span id="sort-icon-total">↕</span></button></th>
+                      <th class="px-4 py-3 text-left">Estado</th>
+                      <th class="px-4 py-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pedidos-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+                </table>
+              </div>
+              <div id="pedidos-empty" class="hidden py-12 text-center text-gray-400 text-sm">No se encontraron pedidos con los filtros actuales.</div>
+              <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-600">
+                <span id="pedidos-page-info">Mostrando 0 pedidos</span>
+                <div class="flex items-center gap-2">
+                  <button id="pedidos-prev-page" type="button" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white disabled:opacity-40 cursor-pointer">Anterior</button>
+                  <span id="pedidos-page-num" class="font-semibold px-2">Página 1</span>
+                  <button id="pedidos-next-page" type="button" class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white disabled:opacity-40 cursor-pointer">Siguiente</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="pedidos-bolsas-panel" class="hidden space-y-4">
+            <div class="bg-[#F5F7F4] border border-[#B6BEB2] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="text-xs text-gray-700">
+                <strong class="text-gray-900">Acumulación de pedidos en tienda:</strong> pulsa sobre cualquier bolsa abierta para expandir el resumen detallado de cada pedido, fechas, estados y artículos con sus precios.
+              </div>
+              <input id="pedidos-bolsas-search" type="text" placeholder="Filtrar bolsa por clienta o pedido..." class="w-full sm:w-72 px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+            </div>
+            <div id="pedidos-bolsas-list" class="space-y-3"></div>
+            <div id="pedidos-bolsas-empty" class="hidden bg-white border border-gray-200 rounded-2xl py-12 text-center text-gray-400 text-sm">No hay ninguna bolsa abierta en este momento.</div>
+          </div>
+        </div>
+
+        <!-- SUBVISTA 2: WIZARD NUEVO PEDIDO -->
+        <div id="pedidos-subview-wizard" class="hidden space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <button id="btn-wizard-cancelar" type="button" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm text-gray-600 cursor-pointer">← Cancelar</button>
+              <h2 class="text-xl font-bold text-gray-800">Nuevo pedido</h2>
+            </div>
+            <span class="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-lg">Nº BLC- automático al guardar</span>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs grid grid-cols-3 gap-2 text-center text-xs sm:text-sm font-medium">
+            <div id="wiz-step-ind-1" class="py-2 px-3 rounded-xl bg-[#F5F7F4] text-gray-900 border border-[#B6BEB2]">1. Cliente</div>
+            <div id="wiz-step-ind-2" class="py-2 px-3 rounded-xl bg-gray-50 text-gray-400 border border-gray-200">2. Artículos</div>
+            <div id="wiz-step-ind-3" class="py-2 px-3 rounded-xl bg-gray-50 text-gray-400 border border-gray-200">3. Confirmar</div>
+          </div>
+
+          <div id="wiz-panel-1" class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div><h3 class="text-lg font-semibold text-gray-800">Seleccionar cliente</h3><p class="text-xs text-gray-500">Busca un cliente existente o crea uno nuevo.</p></div>
+              <button id="wiz-btn-nuevo-cliente" type="button" class="px-4 py-2 rounded-xl bg-[#F5F7F4] hover:bg-[#EAEEE9] text-gray-900 font-semibold text-sm border border-[#B6BEB2] cursor-pointer">+ Nuevo cliente</button>
+            </div>
+            <div class="relative">
+              <input id="wiz-cliente-search" type="text" autocomplete="off" placeholder="Escribe nombre, teléfono o email del cliente..." class="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+              <div id="wiz-cliente-dropdown" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto divide-y divide-gray-100"></div>
+            </div>
+            <div id="wiz-cliente-seleccionado" class="hidden p-4 rounded-xl bg-[#F5F7F4] border border-[#B6BEB2] flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase font-semibold text-gray-500">Cliente seleccionado</p>
+                <p id="wiz-cliente-sel-nombre" class="font-bold text-gray-900 text-base"></p>
+                <p id="wiz-cliente-sel-info" class="text-xs text-gray-600"></p>
+              </div>
+              <button id="wiz-cliente-quitar" type="button" class="text-xs text-red-600 hover:underline font-medium cursor-pointer">Cambiar</button>
+            </div>
+            <div id="wiz-bolsa-banner" class="hidden p-4 rounded-xl bg-amber-50/80 border border-amber-200 space-y-2.5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <p class="text-xs font-bold text-amber-900">🛍️ Esta clienta ya tiene una bolsa abierta en tienda</p>
+                  <p id="wiz-bolsa-banner-info" class="text-xs text-amber-800 mt-0.5"></p>
+                </div>
+                <button id="wiz-bolsa-btn-ir-pendiente" type="button" class="hidden px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold cursor-pointer whitespace-nowrap">➕ Añadir al pedido existente</button>
+              </div>
+              <p class="text-[11px] text-amber-700">Si prefieres registrar una compra separada (por ejemplo, si ya pagó la anterior), pulsa «Continuar a Artículos» y se vinculará automáticamente a su misma bolsa.</p>
+            </div>
+            <div class="flex justify-end"><button id="wiz-next-1" type="button" class="px-6 py-2.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Continuar a Artículos →</button></div>
+          </div>
+
+          <div id="wiz-panel-2" class="hidden bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-5">
+            <div class="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                <div class="md:col-span-5 relative">
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Artículo (nombre, código o alias)</label>
+                  <input id="wiz-art-search" type="text" autocomplete="off" placeholder="Buscar o escribir artículo nuevo..." class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-xl" />
+                  <div id="wiz-art-dropdown" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto divide-y divide-gray-100"></div>
+                </div>
+                <div class="md:col-span-3">
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Variante (Talla / Color)</label>
+                  <select id="wiz-var-select" class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-xl" disabled><option value="">Selecciona artículo</option></select>
+                  <div id="wiz-nuevo-var-box" class="hidden grid grid-cols-2 gap-1.5">
+                    <div class="relative flex items-center">
+                      <input id="wiz-nuevo-talla" type="text" autocomplete="off" data-combo-kind="talla" placeholder="Talla" class="w-full pl-2 pr-6 py-2 text-xs bg-white border border-gray-300 rounded-xl" />
+                      <button type="button" data-combo-btn="talla" tabindex="-1" class="absolute right-1 px-1 py-1 text-gray-400 hover:text-gray-700 text-xs cursor-pointer" title="Elegir talla">▾</button>
+                    </div>
+                    <div class="relative flex items-center">
+                      <input id="wiz-nuevo-color" type="text" autocomplete="off" data-combo-kind="color" placeholder="Color" class="w-full pl-2 pr-6 py-2 text-xs bg-white border border-gray-300 rounded-xl" />
+                      <button type="button" data-combo-btn="color" tabindex="-1" class="absolute right-1 px-1 py-1 text-gray-400 hover:text-gray-700 text-xs cursor-pointer" title="Elegir color">▾</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad</label>
+                  <input id="wiz-art-cantidad" type="number" min="1" value="1" class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-xl" />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Precio (€)</label>
+                  <input id="wiz-art-precio" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-xl" />
+                </div>
+              </div>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div id="wiz-stock-warning" class="text-xs font-medium min-h-[1rem]"></div>
+                <button id="wiz-btn-add-linea" type="button" class="px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium cursor-pointer">+ Añadir línea</button>
+              </div>
+
+              <!-- Añadir Portes o Descuento como artículo -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-3 border-t border-gray-200">
+                <div class="p-3 rounded-xl bg-white border border-gray-200 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-gray-700">🚚 Añadir porte como artículo</span>
+                    <button id="wiz-btn-ir-portes" type="button" class="text-[11px] text-[#727D6E] hover:underline font-medium cursor-pointer">Configurar portes</button>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <select id="wiz-porte-select" class="sm:col-span-5 px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg"></select>
+                    <input id="wiz-porte-nombre" type="text" placeholder="Concepto porte" class="sm:col-span-4 px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" />
+                    <input id="wiz-porte-precio" type="number" min="0" step="0.01" placeholder="0.00 €" class="sm:col-span-3 px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-right" />
+                  </div>
+                  <div class="flex justify-end">
+                    <button id="wiz-btn-add-porte" type="button" class="px-3 py-1.5 rounded-lg bg-[#F5F7F4] border border-[#B6BEB2] hover:bg-[#EAEEE9] text-gray-900 text-xs font-semibold cursor-pointer">+ Añadir porte</button>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-white border border-gray-200 space-y-2">
+                  <span class="block text-xs font-semibold text-gray-700">🏷️ Añadir descuento como artículo</span>
+                  <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <input id="wiz-desc-nombre" type="text" value="Descuento" placeholder="Nombre descuento" class="sm:col-span-6 px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" />
+                    <select id="wiz-desc-tipo" class="sm:col-span-2 px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg">
+                      <option value="eur">€</option>
+                      <option value="pct">%</option>
+                    </select>
+                    <input id="wiz-desc-valor" type="number" min="0" step="0.01" placeholder="Importe" class="sm:col-span-4 px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-right" />
+                  </div>
+                  <div class="flex justify-end">
+                    <button id="wiz-btn-add-desc" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-emerald-900 text-xs font-semibold cursor-pointer">+ Añadir descuento</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto border border-gray-200 rounded-xl">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="px-3 py-2.5 text-left">Artículo (editable)</th>
+                    <th class="px-3 py-2.5 text-left">Variante</th>
+                    <th class="px-3 py-2.5 text-center">Cantidad</th>
+                    <th class="px-3 py-2.5 text-right">Precio unit. (€)</th>
+                    <th class="px-3 py-2.5 text-right">Total línea</th>
+                    <th class="px-3 py-2.5 text-center">Quitar</th>
+                  </tr>
+                </thead>
+                <tbody id="wiz-lineas-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+              </table>
+              <div id="wiz-lineas-empty" class="py-8 text-center text-xs text-gray-400">Todavía no hay artículos añadidos.</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+              <div class="md:col-span-7 space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Notas del pedido</label>
+                  <textarea id="wiz-notas" rows="3" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl"></textarea>
+                </div>
+              </div>
+              <div class="md:col-span-5 bg-gray-50 border border-gray-200 rounded-xl p-4 text-right space-y-1.5">
+                <div class="flex justify-between text-xs text-gray-500"><span>Artículos y portes</span><span id="wiz-subtotal-live">0,00 €</span></div>
+                <div id="wiz-desc-live-row" class="hidden flex justify-between text-xs text-emerald-700 font-medium"><span>Descuentos aplicados</span><span id="wiz-desc-live">-0,00 €</span></div>
+                <div class="pt-1.5 border-t border-gray-200 flex items-baseline justify-between">
+                  <span class="text-xs text-gray-500 uppercase font-semibold">Total pedido (IVA incl.)</span>
+                  <span id="wiz-total-live" class="text-2xl font-bold text-gray-900">0,00 €</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-between">
+              <button id="wiz-back-2" type="button" class="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium cursor-pointer">← Atrás</button>
+              <button id="wiz-next-2" type="button" class="px-6 py-2.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Revisar pedido →</button>
+            </div>
+          </div>
+
+          <div id="wiz-panel-3" class="hidden bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-5">
+            <div id="wiz-confirm-body" class="space-y-5">
+              <h3 class="text-lg font-semibold text-gray-800">Resumen y confirmación</h3>
+              <div id="wiz-resumen-content" class="space-y-4"></div>
+              <label class="flex items-start gap-2.5 p-3.5 rounded-xl bg-[#F5F7F4] border border-[#B6BEB2] cursor-pointer text-sm">
+                <input id="wiz-dejar-en-bolsa" type="checkbox" class="mt-0.5 w-4 h-4 accent-[#B6BEB2]" />
+                <div>
+                  <span class="font-semibold text-gray-900">🛍️ Dejar en bolsa abierta (acumular para un único envío)</span>
+                  <span id="wiz-bolsa-hint" class="block text-xs text-gray-500 mt-0.5">El pedido queda apartado en tienda sin enviar todavía hasta que la clienta pida el envío.</span>
+                </div>
+              </label>
+              <div class="flex justify-between">
+                <button id="wiz-back-3" type="button" class="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium cursor-pointer">← Atrás</button>
+                <button id="wiz-guardar-final" type="button" class="px-6 py-2.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-bold text-sm cursor-pointer">Confirmar y crear pedido</button>
+              </div>
+            </div>
+            <div id="wiz-success-body" class="hidden py-6 text-center space-y-4">
+              <div class="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mx-auto text-xl font-bold">✓</div>
+              <div>
+                <p class="text-xs uppercase font-semibold text-gray-400">Pedido registrado</p>
+                <h3 id="wiz-created-numero" class="text-2xl font-bold text-gray-900"></h3>
+                <p id="wiz-success-bolsa-msg" class="text-sm text-gray-500 mt-1">Stock descontado y guardado como Pendiente de pago.</p>
+              </div>
+              <div class="flex flex-wrap justify-center gap-3">
+                <button id="wiz-btn-ver-creado" type="button" class="px-5 py-2.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Ver pedido</button>
+                <button id="wiz-btn-albaran-creado" type="button" class="px-5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-medium text-sm cursor-pointer">Generar albarán</button>
+                <button id="wiz-btn-volver-lista" type="button" class="px-5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-600 text-sm cursor-pointer">Volver al listado</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBVISTA 3: DETALLE DE PEDIDO -->
+        <div id="pedidos-subview-detalle" class="hidden space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <button id="det-btn-volver" type="button" class="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 cursor-pointer">← Volver a pedidos</button>
+              <div>
+                <div class="flex items-center gap-2.5">
+                  <h2 id="det-numero" class="text-2xl font-bold text-gray-900">BLC-</h2>
+                  <span id="det-estado-badge" class="px-2.5 py-1 rounded-lg text-xs font-semibold"></span>
+                </div>
+                <p id="det-fecha-sub" class="text-xs text-gray-500"></p>
+              </div>
+            </div>
+            <div id="det-acciones-estado" class="flex flex-wrap items-center gap-2"></div>
+          </div>
+
+          <div id="det-auto-info" class="hidden p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-sm font-medium"></div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 space-y-5">
+              <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p class="text-xs text-gray-400 uppercase font-semibold">Cliente</p>
+                  <p id="det-cliente-nombre" class="font-semibold text-gray-900 mt-0.5"></p>
+                  <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
+                    <p id="det-cliente-tel" class="text-xs text-gray-500"></p>
+                    <a id="det-btn-whatsapp" target="_blank" rel="noopener noreferrer" class="hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-[11px] font-semibold">💬 WhatsApp</a>
+                    <button id="det-btn-copy-wa" type="button" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gray-100 border border-gray-200 text-gray-700 hover:bg-gray-200 text-[11px] font-semibold cursor-pointer">📋 Copiar resumen</button>
+                  </div>
+                </div>
+                <div><p class="text-xs text-gray-400 uppercase font-semibold">Método de pago</p><p id="det-metodo-pago" class="font-medium text-gray-800 mt-0.5">—</p></div>
+                <div><p class="text-xs text-gray-400 uppercase font-semibold">Factura</p><p id="det-numero-factura" class="font-medium text-gray-800 mt-0.5">—</p></div>
+              </div>
+
+              <div class="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-200 flex items-center justify-between">
+                  <h3 class="font-semibold text-gray-800">Artículos del pedido</h3>
+                  <span id="det-edit-hint" class="text-xs text-gray-400"></span>
+                </div>
+                <div id="det-add-articulo-box" class="hidden p-4 bg-gray-50 border-b border-gray-200 space-y-3">
+                  <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                    <div class="sm:col-span-4 relative">
+                      <label class="block text-[11px] font-medium text-gray-600 mb-1">Artículo</label>
+                      <input id="det-add-search" type="text" autocomplete="off" placeholder="Buscar artículo..." class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" />
+                      <div id="det-add-dropdown" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto divide-y divide-gray-100"></div>
+                    </div>
+                    <div class="sm:col-span-3">
+                      <label class="block text-[11px] font-medium text-gray-600 mb-1">Variante</label>
+                      <select id="det-add-variante" class="w-full px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" disabled><option value="">Variante</option></select>
+                    </div>
+                    <div class="sm:col-span-1">
+                      <label class="block text-[11px] font-medium text-gray-600 mb-1">Cant.</label>
+                      <input id="det-add-cantidad" type="number" min="1" value="1" class="w-full px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-center" />
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="block text-[11px] font-medium text-gray-600 mb-1">Precio (€)</label>
+                      <input id="det-add-precio" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-right" />
+                    </div>
+                    <div class="sm:col-span-2"><button id="det-btn-confirm-add" type="button" class="w-full px-2 py-1.5 text-xs font-semibold rounded-lg bg-gray-900 text-white cursor-pointer">+ Añadir</button></div>
+                  </div>
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-2.5 pt-2.5 border-t border-gray-200">
+                    <div class="flex flex-wrap sm:flex-nowrap gap-1.5 items-center">
+                      <select id="det-porte-select" class="w-full sm:w-36 px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg"></select>
+                      <input id="det-porte-nombre" type="text" placeholder="Porte" class="flex-1 min-w-[90px] px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" />
+                      <input id="det-porte-precio" type="number" min="0" step="0.01" placeholder="0.00 €" class="w-20 px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-right" />
+                      <button id="det-btn-add-porte" type="button" class="px-2.5 py-1.5 rounded-lg bg-[#F5F7F4] border border-[#B6BEB2] text-xs font-semibold text-gray-900 whitespace-nowrap cursor-pointer">+ Porte</button>
+                    </div>
+                    <div class="flex flex-wrap sm:flex-nowrap gap-1.5 items-center">
+                      <input id="det-add-desc-nombre" type="text" value="Descuento" placeholder="Nombre descuento" class="flex-1 min-w-[100px] px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" />
+                      <select id="det-add-desc-tipo" class="px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg"><option value="eur">€</option><option value="pct">%</option></select>
+                      <input id="det-add-desc-valor" type="number" min="0" step="0.01" placeholder="0.00" class="w-20 px-2 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-right" />
+                      <button id="det-btn-add-desc" type="button" class="px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 text-xs font-semibold text-emerald-900 whitespace-nowrap cursor-pointer">+ Descuento</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                      <tr>
+                        <th class="px-4 py-2.5 text-left">Artículo</th>
+                        <th class="px-4 py-2.5 text-left">Variante</th>
+                        <th class="px-4 py-2.5 text-center">Cant.</th>
+                        <th class="px-4 py-2.5 text-right">Precio unit.</th>
+                        <th class="px-4 py-2.5 text-right">Subtotal</th>
+                        <th id="det-col-quitar-th" class="hidden px-3 py-2.5 text-center">Quitar</th>
+                      </tr>
+                    </thead>
+                    <tbody id="det-lineas-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+                  </table>
+                </div>
+                <div class="px-5 py-4 bg-gray-50 border-t border-gray-200 space-y-2.5">
+                  <div id="det-importes-edit" class="hidden grid grid-cols-1 sm:grid-cols-12 gap-2 items-end pb-2 border-b border-gray-200">
+                    <div class="sm:col-span-5">
+                      <label class="block text-[11px] font-semibold text-gray-600 mb-1">Descuento</label>
+                      <div class="flex gap-1.5">
+                        <select id="det-desc-tipo" class="px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"><option value="eur">€</option><option value="pct">%</option></select>
+                        <input id="det-desc-valor" type="number" min="0" step="0.01" placeholder="0" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg bg-white" />
+                      </div>
+                    </div>
+                    <div class="sm:col-span-4">
+                      <label class="block text-[11px] font-semibold text-gray-600 mb-1">Gastos de envío (€)</label>
+                      <input id="det-envio" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg bg-white" />
+                    </div>
+                    <div class="sm:col-span-3">
+                      <button id="det-btn-save-importes" type="button" class="w-full px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-semibold cursor-pointer">Aplicar</button>
+                    </div>
+                  </div>
+                  <div id="det-desglose-extra" class="space-y-1 text-xs text-gray-600"></div>
+                  <div class="flex justify-between items-center pt-1">
+                    <span class="text-sm font-medium text-gray-500">Total pedido (IVA incluido)</span>
+                    <span id="det-total" class="text-xl font-bold text-gray-900">0,00 €</span>
+                  </div>
+                </div>
+              </div>
+
+              <div id="det-devoluciones-box" class="hidden bg-white border border-amber-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-amber-900">Devoluciones parciales y rectificativas</h3>
+                  <span id="det-devoluciones-total" class="text-xs font-bold text-red-700"></span>
+                </div>
+                <div id="det-devoluciones-list" class="space-y-2 text-xs"></div>
+              </div>
+
+              <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-sm font-semibold text-gray-800">Notas del pedido</label>
+                  <button id="det-btn-save-notas" type="button" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium cursor-pointer">Guardar notas</button>
+                </div>
+                <textarea id="det-notas" rows="3" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl"></textarea>
+              </div>
+            </div>
+
+            <div class="space-y-5">
+              <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-4">
+                <h3 class="font-semibold text-gray-800">Historial de estados</h3>
+                <ol id="det-historial-list" class="relative border-l border-gray-200 ml-2 space-y-4"></ol>
+              </div>
+              <div class="bg-white border border-red-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <h3 class="text-sm font-semibold text-red-700">Acciones avanzadas</h3>
+                <button id="det-btn-devolucion-parcial" type="button" class="hidden w-full px-4 py-2 rounded-xl border border-[#B6BEB2] bg-[#F5F7F4] hover:bg-[#EAEEE9] text-gray-900 text-sm font-semibold cursor-pointer">↩ Registrar devolución parcial</button>
+                <button id="det-btn-cancelar-pedido" type="button" class="w-full px-4 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-sm font-medium cursor-pointer">Cancelar pedido (restaura stock)</button>
+                <button id="det-btn-eliminar-pedido" type="button" class="w-full px-4 py-2 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-red-700 text-sm font-medium cursor-pointer">Eliminar pedido definitivamente</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 3. SECCIÓN: CLIENTES ==================== -->
+      <section id="view-clientes" class="hidden space-y-5">
+        <div id="clientes-subview-lista" class="space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Clientes</h2><p class="text-sm text-gray-500">Directorio de clientas, historial y métricas de compra.</p></div>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-export-clientes" type="button" class="px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 cursor-pointer">⬇ Exportar</button>
+              <button id="btn-nuevo-cliente" type="button" class="px-5 py-2.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">+ Nuevo cliente</button>
+            </div>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs">
+            <input id="clientes-search" type="text" placeholder="Buscar por nombre, teléfono o email..." class="w-full sm:w-96 px-3.5 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="px-4 py-3 text-left"><button type="button" data-sort-cli="nombre" class="hover:text-gray-900 cursor-pointer">Nombre</button></th>
+                    <th class="px-4 py-3 text-left">Teléfono</th>
+                    <th class="px-4 py-3 text-left">Email</th>
+                    <th class="px-4 py-3 text-right"><button type="button" data-sort-cli="totalGastado" class="hover:text-gray-900 cursor-pointer">Total gastado</button></th>
+                    <th class="px-4 py-3 text-center"><button type="button" data-sort-cli="numPedidos" class="hover:text-gray-900 cursor-pointer">Pedidos</button></th>
+                    <th class="px-4 py-3 text-left"><button type="button" data-sort-cli="ultimoPedido" class="hover:text-gray-900 cursor-pointer">Último pedido</button></th>
+                    <th class="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="clientes-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+              </table>
+            </div>
+            <div id="clientes-empty" class="hidden py-12 text-center text-gray-400 text-sm">No se encontraron clientes.</div>
+            <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-600">
+              <span id="clientes-page-info">0 clientes</span>
+              <div class="flex items-center gap-2">
+                <button id="clientes-prev" type="button" class="px-3 py-1 rounded-lg border border-gray-200 bg-white disabled:opacity-40 cursor-pointer">Anterior</button>
+                <span id="clientes-page-num" class="font-semibold">1</span>
+                <button id="clientes-next" type="button" class="px-3 py-1 rounded-lg border border-gray-200 bg-white disabled:opacity-40 cursor-pointer">Siguiente</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ficha de cliente -->
+        <div id="clientes-subview-ficha" class="hidden space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <button id="cli-ficha-volver" type="button" class="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 cursor-pointer">← Volver a clientes</button>
+            <div class="flex flex-wrap gap-2">
+              <a id="cli-ficha-whatsapp" target="_blank" rel="noopener noreferrer" class="hidden px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-sm font-semibold">💬 WhatsApp</a>
+              <button id="cli-ficha-editar" type="button" class="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium cursor-pointer">Editar datos</button>
+              <button id="cli-ficha-eliminar" type="button" class="px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-medium cursor-pointer">Eliminar</button>
+            </div>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-3">
+            <h2 id="cf-nombre" class="text-2xl font-bold text-gray-900"></h2>
+            <p id="cf-contacto" class="text-sm text-gray-600"></p>
+            <p id="cf-direccion" class="text-xs text-gray-500"></p>
+            <div class="pt-2 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold text-gray-600 uppercase">Notas libres</label>
+                <button id="cf-save-notas" type="button" class="px-3 py-1 rounded-lg bg-gray-900 text-white text-xs cursor-pointer">Guardar notas</button>
+              </div>
+              <textarea id="cf-notas" rows="2" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl"></textarea>
+            </div>
+          </div>
+
+          <div id="cf-bolsa-banner" class="hidden"></div>
+
+          <div id="cf-kpis" class="grid grid-cols-2 lg:grid-cols-5 gap-3"></div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="font-semibold text-gray-800">Historial de pedidos</h3>
+                <select id="cf-filter-estado" class="px-2.5 py-1 text-xs border border-gray-200 rounded-lg bg-white">
+                  <option value="">Todos</option>
+                  <option value="pendiente_pago">Pendiente pago</option>
+                  <option value="pagado">Pagado</option>
+                  <option value="enviado">Enviado</option>
+                  <option value="completado">Completado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div class="overflow-x-auto border border-gray-100 rounded-xl">
+                <table class="min-w-full divide-y divide-gray-100 text-sm">
+                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                    <tr><th class="px-3 py-2 text-left">Nº Pedido</th><th class="px-3 py-2 text-left">Fecha</th><th class="px-3 py-2 text-left">Artículos</th><th class="px-3 py-2 text-right">Importe</th><th class="px-3 py-2 text-left">Estado</th></tr>
+                  </thead>
+                  <tbody id="cf-pedidos-tbody" class="divide-y divide-gray-100"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <h3 class="font-semibold text-gray-800">Artículos más comprados</h3>
+              <ul id="cf-top-articulos" class="divide-y divide-gray-100 text-sm"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 3B. SECCIÓN: PROVEEDORES ==================== -->
+      <section id="view-proveedores" class="hidden space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Proveedores</h2>
+            <p class="text-sm text-gray-500">Directorio de proveedores, fichas de gasto y facturas de compra.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button id="btn-prov-escanear-factura" type="button" class="px-4 py-2.5 rounded-xl border border-[#B6BEB2] bg-[#F5F7F4] hover:bg-[#EAEEE9] text-gray-900 font-semibold text-sm cursor-pointer">📄 Escanear factura</button>
+            <button id="btn-nuevo-proveedor" type="button" class="px-5 py-2.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm shadow-xs cursor-pointer">+ Nuevo proveedor</button>
+          </div>
+        </div>
+
+        <!-- Pestañas Proveedores -->
+        <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
+          <button type="button" data-prov-tab="directorio" class="prov-tab-btn px-4 py-2 rounded-xl text-sm font-semibold bg-[#F5F7F4] text-gray-900 border border-[#B6BEB2] cursor-pointer">Proveedores</button>
+          <button type="button" data-prov-tab="facturas" class="prov-tab-btn inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 cursor-pointer">Facturas de compra<span id="prov-fac-pend-badge" class="hidden ml-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200"></span></button>
+        </div>
+
+        <!-- Tab 1: Directorio y Ficha de Proveedor -->
+        <div id="prov-tab-directorio" class="space-y-5">
+          <div id="prov-subview-lista" class="space-y-4">
+            <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <input id="prov-search" type="text" placeholder="Buscar por nombre, CIF, teléfono o email..." class="w-full sm:w-96 px-3.5 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+              <button id="btn-export-proveedores" type="button" class="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-700 cursor-pointer">⬇ Exportar proveedores</button>
+            </div>
+
+            <div class="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-4 py-3 text-left"><button type="button" data-sort-prov="nombre" class="hover:text-gray-900 cursor-pointer">Nombre</button></th>
+                      <th class="px-4 py-3 text-left">CIF / NIF</th>
+                      <th class="px-4 py-3 text-left">Contacto</th>
+                      <th class="px-4 py-3 text-right"><button type="button" data-sort-prov="totalComprado" class="hover:text-gray-900 cursor-pointer">Total comprado</button></th>
+                      <th class="px-4 py-3 text-center"><button type="button" data-sort-prov="numFacturas" class="hover:text-gray-900 cursor-pointer">Facturas</button></th>
+                      <th class="px-4 py-3 text-left"><button type="button" data-sort-prov="ultimaFactura" class="hover:text-gray-900 cursor-pointer">Última factura</button></th>
+                      <th class="px-4 py-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="prov-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+                </table>
+              </div>
+              <div id="prov-empty" class="hidden py-12 text-center text-gray-400 text-sm">No se encontraron proveedores.</div>
+            </div>
+          </div>
+
+          <!-- Ficha de proveedor -->
+          <div id="prov-subview-ficha" class="hidden space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <button id="prov-ficha-volver" type="button" class="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 cursor-pointer">← Volver a proveedores</button>
+              <div class="flex flex-wrap gap-2">
+                <a id="prov-ficha-whatsapp" target="_blank" rel="noopener noreferrer" class="hidden px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-sm font-semibold">💬 WhatsApp</a>
+                <button id="prov-ficha-editar" type="button" class="px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium cursor-pointer">Editar datos</button>
+                <button id="prov-ficha-eliminar" type="button" class="px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-medium cursor-pointer">Eliminar</button>
+              </div>
+            </div>
+
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-3">
+              <h2 id="pf-nombre" class="text-2xl font-bold text-gray-900"></h2>
+              <p id="pf-contacto" class="text-sm text-gray-600"></p>
+              <div class="pt-2 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-semibold text-gray-600 uppercase">Notas del proveedor</label>
+                  <button id="pf-save-notas" type="button" class="px-3 py-1 rounded-lg bg-gray-900 text-white text-xs cursor-pointer">Guardar notas</button>
+                </div>
+                <textarea id="pf-notas" rows="2" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl"></textarea>
+              </div>
+            </div>
+
+            <div id="pf-kpis" class="grid grid-cols-2 lg:grid-cols-5 gap-3"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div class="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <h3 class="font-semibold text-gray-800">Facturas de compra</h3>
+                <div class="overflow-x-auto border border-gray-100 rounded-xl">
+                  <table class="min-w-full divide-y divide-gray-100 text-sm">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                      <tr><th class="px-3 py-2 text-left">Fecha</th><th class="px-3 py-2 text-left">Nº Factura</th><th class="px-3 py-2 text-left">Estado</th><th class="px-3 py-2 text-right">Base imp.</th><th class="px-3 py-2 text-right">IVA + RE</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right"></th></tr>
+                    </thead>
+                    <tbody id="pf-facturas-tbody" class="divide-y divide-gray-100"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <h3 class="font-semibold text-gray-800">Artículos en catálogo</h3>
+                <ul id="pf-articulos-list" class="divide-y divide-gray-100 text-sm"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Facturas de Compra -->
+        <div id="prov-tab-facturas" class="hidden space-y-4">
+          <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+            <input id="faccomp-search" type="text" placeholder="Buscar por nº factura o proveedor..." class="lg:col-span-3 px-3.5 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+            <select id="faccomp-filter-estado" class="lg:col-span-2 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white">
+              <option value="">Todos los estados</option>
+              <option value="pendiente_recibir">📦 Pendiente de recibir</option>
+              <option value="recibido">✅ Recibido</option>
+            </select>
+            <input id="faccomp-desde" type="date" class="lg:col-span-2 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white" />
+            <input id="faccomp-hasta" type="date" class="lg:col-span-2 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white" />
+            <div class="sm:col-span-2 lg:col-span-3 flex gap-2 justify-end">
+              <button id="btn-export-faccomp" type="button" class="flex-1 px-3 py-2 text-xs font-semibold rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer whitespace-nowrap">⬇ Exportar CSV</button>
+              <button id="btn-nueva-faccomp" type="button" class="flex-1 px-3 py-2 text-xs font-semibold rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 shadow-xs cursor-pointer whitespace-nowrap">+ Nueva factura</button>
+            </div>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="px-4 py-3 text-left">Fecha</th>
+                    <th class="px-4 py-3 text-left">Nº Factura</th>
+                    <th class="px-4 py-3 text-left">Proveedor</th>
+                    <th class="px-4 py-3 text-left">Estado</th>
+                    <th class="px-4 py-3 text-right">Base imp.</th>
+                    <th class="px-4 py-3 text-right">IVA + RE</th>
+                    <th class="px-4 py-3 text-right">Total</th>
+                    <th class="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="faccomp-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+              </table>
+            </div>
+            <div id="faccomp-empty" class="hidden py-10 text-center text-sm text-gray-400">No hay facturas de compra registradas todavía.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 4. SECCIÓN: BALANCES ==================== -->
+      <section id="view-balances" class="hidden space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-3">
+          <div class="flex items-center gap-2">
+            <button id="bal-tab-btn-resumen" type="button" data-bal-tab="resumen" class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#F5F7F4] text-gray-900 border border-[#B6BEB2] cursor-pointer">📊 Resumen y totales</button>
+            <button id="bal-tab-btn-impuestos" type="button" data-bal-tab="impuestos" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 cursor-pointer">🧾 Impuestos (Modelo 303)</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btn-bal-lote-facturas" type="button" class="px-3.5 py-1.5 rounded-xl border border-[#B6BEB2] bg-[#F5F7F4] hover:bg-[#EAEEE9] text-xs font-semibold text-gray-900 cursor-pointer">🧾 Facturas PDF</button>
+            <button id="btn-export-balances" type="button" class="px-3.5 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-700 cursor-pointer">⬇ Exportar informe</button>
+          </div>
+        </div>
+
+        <!-- PESTAÑA 1: RESUMEN -->
+        <div id="balances-tab-resumen" class="space-y-6">
+          <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Balances</h2>
+                <p id="bal-rango-label" class="text-xs text-gray-500 mt-0.5">Calculando período...</p>
+              </div>
+              <div id="balances-spinner" class="hidden inline-flex items-center gap-2 text-xs font-medium text-[#727D6E] bg-[#F5F7F4] px-3 py-1.5 rounded-xl border border-[#B6BEB2]">Calculando métricas...</div>
+            </div>
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div class="flex flex-wrap items-center gap-1.5" id="bal-presets">
+                <button type="button" data-preset="hoy" class="bal-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer">Hoy</button>
+                <button type="button" data-preset="semana" class="bal-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer">Esta semana</button>
+                <button type="button" data-preset="mes" class="bal-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer">Este mes</button>
+                <button type="button" data-preset="trimestre" class="bal-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer">Este trimestre</button>
+                <button type="button" data-preset="anio" class="bal-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer">Este año</button>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 text-xs">
+                <select id="bal-year-select" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-medium"><option value="">Año concreto...</option></select>
+                <input id="bal-date-start" type="date" class="px-2.5 py-1.5 rounded-xl border border-gray-200 bg-white" />
+                <span class="text-gray-400">a</span>
+                <input id="bal-date-end" type="date" class="px-2.5 py-1.5 rounded-xl border border-gray-200 bg-white" />
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs"><p class="text-xs font-semibold text-gray-500">💰 Total facturado</p><p id="bal-kpi-facturado" class="text-2xl font-bold text-gray-900 mt-1.5">0,00 €</p><p class="text-[11px] text-gray-400 mt-1">Pagados, enviados y completados</p></div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs"><p class="text-xs font-semibold text-gray-500">🛍️ Nº de pedidos</p><p id="bal-kpi-pedidos" class="text-2xl font-bold text-gray-900 mt-1.5">0</p><p id="bal-kpi-pedidos-sub" class="text-[11px] text-gray-400 mt-1">En el período</p></div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs"><p class="text-xs font-semibold text-gray-500">📦 Compras proveedores</p><p id="bal-kpi-compras" class="text-2xl font-bold text-gray-900 mt-1.5">0,00 €</p><p id="bal-kpi-compras-sub" class="text-[11px] text-gray-400 mt-1">0 facturas</p></div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs"><p class="text-xs font-semibold text-gray-500">📈 Margen bruto</p><p id="bal-kpi-margen" class="text-2xl font-bold text-gray-900 mt-1.5">0,00 €</p><p class="text-[11px] text-gray-400 mt-1">Facturado − Compras</p></div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs"><p class="text-xs font-semibold text-gray-500">🎫 Ticket medio</p><p id="bal-kpi-ticket" class="text-2xl font-bold text-gray-900 mt-1.5">0,00 €</p><p class="text-[11px] text-gray-400 mt-1">Sobre pedidos pagados</p></div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-5 shadow-xs flex flex-col">
+              <div class="mb-3"><h3 class="font-semibold text-gray-800">Evolución de facturación</h3><p id="bal-chart-granularity" class="text-xs text-gray-400"></p></div>
+              <div class="relative flex-1 min-h-[250px] w-full">
+                <canvas id="bal-chart-canvas" class="w-full h-[250px] block"></canvas>
+                <div id="bal-chart-empty" class="hidden absolute inset-0 flex items-center justify-center text-sm text-gray-400 bg-gray-50/70 rounded-xl border border-dashed border-gray-200">Sin ventas en este período</div>
+                <div id="bal-chart-tooltip" class="hidden pointer-events-none absolute z-10 bg-gray-900 text-white text-xs rounded-lg px-2.5 py-1.5 shadow-lg whitespace-nowrap"></div>
+              </div>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <h3 class="font-semibold text-gray-800">Pedidos por estado</h3>
+              <div class="overflow-hidden border border-gray-100 rounded-xl">
+                <table class="min-w-full divide-y divide-gray-100 text-sm">
+                  <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2 text-left">Estado</th><th class="px-3 py-2 text-center">Nº</th><th class="px-3 py-2 text-right">Importe</th></tr></thead>
+                  <tbody id="bal-estados-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <h3 class="font-semibold text-gray-800">Top 5 artículos más vendidos</h3>
+              <div class="overflow-x-auto border border-gray-100 rounded-xl">
+                <table class="min-w-full divide-y divide-gray-100 text-sm">
+                  <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2 text-left">Artículo</th><th class="px-3 py-2 text-left">Variante top</th><th class="px-3 py-2 text-center">Uds.</th><th class="px-3 py-2 text-right">Importe</th></tr></thead>
+                  <tbody id="bal-top-articulos-tbody" class="divide-y divide-gray-100"></tbody>
+                </table>
+              </div>
+              <p id="bal-top-art-empty" class="hidden text-center text-xs text-gray-400 py-4">Sin ventas en este período.</p>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <h3 class="font-semibold text-gray-800">Top 5 clientes por volumen</h3>
+              <div class="overflow-x-auto border border-gray-100 rounded-xl">
+                <table class="min-w-full divide-y divide-gray-100 text-sm">
+                  <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2 text-left">Cliente</th><th class="px-3 py-2 text-center">Pedidos</th><th class="px-3 py-2 text-right">Total gastado</th></tr></thead>
+                  <tbody id="bal-top-clientes-tbody" class="divide-y divide-gray-100"></tbody>
+                </table>
+              </div>
+              <p id="bal-top-cli-empty" class="hidden text-center text-xs text-gray-400 py-4">Sin pedidos pagados en este período.</p>
+            </div>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <h3 class="font-semibold text-gray-800">Comparativa con el año anterior</h3>
+              <span id="bal-comp-rango" class="text-xs text-gray-400"></span>
+            </div>
+            <div id="bal-comp-content" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+            <div id="bal-comp-empty" class="hidden py-6 text-center text-sm text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">Sin datos comparativos</div>
+          </div>
+        </div>
+
+        <!-- PESTAÑA 2: IMPUESTOS MODELO 303 -->
+        <div id="balances-tab-impuestos" class="hidden space-y-6">
+          <div class="bg-[#F5F7F4] border border-[#B6BEB2] rounded-2xl p-4 text-xs text-gray-700">
+            <strong class="text-gray-900">Régimen fiscal configurado:</strong> Estimación Directa Simplificada · Régimen Especial de Recargo de Equivalencia (RE). El Modelo 303 liquida únicamente el IVA devengado en ventas (IVA soportado deducible = 0 €). El RE pagado a proveedores es informativo.
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-5">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div><span class="text-xs uppercase font-semibold text-gray-400">Trimestre en curso (hasta hoy)</span><h3 id="imp-curso-titulo" class="text-2xl font-bold text-gray-900">Trimestre</h3></div>
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="text-right"><p class="text-[11px] uppercase text-gray-400 font-semibold">Fecha límite 303</p><p id="imp-curso-limite" class="text-sm font-bold text-gray-800">—</p></div>
+                <div id="imp-curso-dias-badge" class="px-3.5 py-2 rounded-xl text-xs font-bold border">—</div>
+              </div>
+            </div>
+            <div class="overflow-x-auto border border-gray-200 rounded-xl">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-4 py-2.5 text-left">Tipo IVA devengado</th><th class="px-4 py-2.5 text-right">Base imponible</th><th class="px-4 py-2.5 text-right">Cuota IVA</th><th class="px-4 py-2.5 text-right">Importe a ingresar</th></tr></thead>
+                <tbody id="imp-curso-iva-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+              </table>
+            </div>
+            <div class="p-4 rounded-xl bg-gray-50 border border-dashed border-gray-300 space-y-2">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <h4 class="text-xs font-bold uppercase text-gray-600">ℹ RE pagado a proveedores en el período (informativo)</h4>
+                <span class="text-[11px] text-gray-500">No afecta al resultado del 303</span>
+              </div>
+              <div id="imp-curso-re-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-xs"></div>
+            </div>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div><h3 class="font-semibold text-gray-800">Generar o recalcular trimestre manualmente</h3><p class="text-xs text-gray-500">Útil si añades pedidos retroactivos.</p></div>
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="imp-gen-trimestre" class="px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white"><option value="1">1T</option><option value="2">2T</option><option value="3">3T</option><option value="4">4T</option></select>
+              <select id="imp-gen-anio" class="px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white"></select>
+              <button id="imp-btn-generar" type="button" class="px-4 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Generar / Recalcular</button>
+            </div>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-xs overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-200"><h3 class="font-semibold text-gray-800">Historial de trimestres guardados (Modelo 303)</h3></div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-4 py-3 text-left">Período</th><th class="px-4 py-3 text-right">Base imponible</th><th class="px-4 py-3 text-right">Total IVA (303)</th><th class="px-4 py-3 text-center">Estado</th><th class="px-4 py-3 text-right">Acciones</th></tr></thead>
+                <tbody id="imp-historial-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
+              </table>
+            </div>
+            <div id="imp-historial-empty" class="hidden py-10 text-center text-sm text-gray-400">No hay registros trimestrales guardados todavía.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 5. SECCIÓN: AJUSTES ==================== -->
+      <section id="view-ajustes" class="hidden space-y-6">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Ajustes</h2>
+          <p class="text-sm text-gray-500">Datos fiscales de la tienda, preferencias de facturación, seguridad y copias de seguridad.</p>
+        </div>
+
+        <form id="form-ajustes" class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">Nombre comercial</label><input id="aj-nombre" type="text" placeholder="babyluc" class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl" /></div>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">CIF / NIF</label><input id="aj-cif" type="text" class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl" /></div>
+            <div class="md:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">Dirección fiscal</label><input id="aj-direccion" type="text" class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl" /></div>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">Teléfono</label><input id="aj-telefono" type="text" class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl" /></div>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">Email</label><input id="aj-email" type="email" class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl" /></div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Logo de la tienda (PNG/JPG)</label>
+              <input id="aj-logo-input" type="file" accept="image/*" class="text-xs text-gray-600" />
+            </div>
+            <div class="flex items-center gap-3">
+              <img id="aj-logo-preview" alt="Logo" class="hidden h-14 object-contain rounded-lg border border-gray-200 p-1 bg-white" />
+              <button id="aj-logo-remove" type="button" class="hidden text-xs text-red-600 hover:underline cursor-pointer">Quitar logo</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">IVA por defecto</label>
+              <select id="aj-iva" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white"><option value="21">21%</option></select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Pedidos por página</label>
+              <select id="aj-paginacion" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Umbral stock bajo global</label>
+              <input id="aj-umbral" type="number" min="0" value="3" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Mensaje de agradecimiento (resumen visual del pedido)</label>
+            <textarea id="aj-mensaje-albaran" rows="2" placeholder="¡Gracias por confiar en babyluc!" class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl"></textarea>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm shadow-xs cursor-pointer">Guardar ajustes</button>
+          </div>
+        </form>
+
+        <!-- Tipos de portes -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div>
+            <h3 class="text-lg font-bold text-gray-800">Tipos de portes (envíos)</h3>
+            <p class="text-xs text-gray-500">Configura distintos tipos de portes con su nombre y precio para poder añadirlos luego en los pedidos como un artículo más.</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end p-3.5 rounded-xl bg-gray-50 border border-gray-200">
+            <div class="sm:col-span-7">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre del porte</label>
+              <input id="aj-porte-nombre" type="text" placeholder="Ej: Envío estándar, Nacex 24h, Recogida en tienda..." class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-xl" />
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Precio (IVA incl. €)</label>
+              <input id="aj-porte-precio" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-xl" />
+            </div>
+            <div class="sm:col-span-2">
+              <button id="aj-porte-add" type="button" class="w-full px-4 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">+ Añadir</button>
+            </div>
+          </div>
+          <div id="aj-portes-list" class="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden bg-white"></div>
+          <p id="aj-portes-empty" class="text-xs text-gray-400 text-center py-3">Aún no hay tipos de portes configurados.</p>
+        </div>
+
+        <!-- Catálogo de Tallas y Colores -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">Catálogo de tallas y colores</h3>
+              <p class="text-xs text-gray-500">Se muestran en los desplegables al crear artículos o escanear facturas (bebé, infantil y adulto).</p>
+            </div>
+            <button id="aj-tc-reset" type="button" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-700 cursor-pointer">↺ Restaurar predeterminados</button>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="p-3.5 rounded-xl bg-gray-50 border border-gray-200 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-700 uppercase">Tallas guardadas</span>
+                <span id="aj-tallas-count" class="text-[11px] text-gray-500"></span>
+              </div>
+              <div class="flex gap-2">
+                <input id="aj-talla-add-input" type="text" placeholder="Añadir talla (ej: 4XL, 2-4a...)" class="flex-1 px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" />
+                <button id="aj-talla-add-btn" type="button" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-semibold cursor-pointer">+ Añadir</button>
+              </div>
+              <div id="aj-tallas-list" class="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pt-1"></div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-gray-50 border border-gray-200 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-700 uppercase">Colores guardados</span>
+                <span id="aj-colores-count" class="text-[11px] text-gray-500"></span>
+              </div>
+              <div class="flex gap-2">
+                <input id="aj-color-add-input" type="text" placeholder="Añadir color (ej: Agua marina...)" class="flex-1 px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" />
+                <button id="aj-color-add-btn" type="button" class="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-semibold cursor-pointer">+ Añadir</button>
+              </div>
+              <div id="aj-colores-list" class="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pt-1"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seguridad PIN -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div class="flex items-center justify-between">
+            <div><h3 class="text-lg font-bold text-gray-800">Seguridad y PIN de acceso</h3><p class="text-xs text-gray-500">Protege el acceso con PIN de 6 dígitos (SHA-256).</p></div>
+            <label class="inline-flex items-center gap-2 cursor-pointer"><input id="aj-pin-activo" type="checkbox" class="w-4 h-4 accent-[#B6BEB2]" /><span class="text-sm font-semibold text-gray-700">PIN activado</span></label>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <span id="aj-pin-status" class="text-xs text-gray-500">Sin PIN configurado</span>
+            <button id="aj-btn-config-pin" type="button" class="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-sm font-medium cursor-pointer">Configurar / Cambiar PIN</button>
+          </div>
+        </div>
+
+        <!-- Contadores -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div><h3 class="text-lg font-bold text-gray-800">Contadores anuales</h3><p class="text-xs text-gray-500">Se reinician automáticamente cada 1 de enero.</p></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="p-4 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+              <div><p class="text-xs text-gray-500">Último Pedido</p><p id="aj-cont-pedido" class="text-lg font-bold text-gray-900">Ninguno</p></div>
+              <button type="button" data-reset-counter="pedido" class="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-semibold text-red-700 cursor-pointer">Reset</button>
+            </div>
+            <div class="p-4 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+              <div><p class="text-xs text-gray-500">Última Factura</p><p id="aj-cont-factura" class="text-lg font-bold text-gray-900">Ninguna</p></div>
+              <button type="button" data-reset-counter="factura" class="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-semibold text-red-700 cursor-pointer">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sincronización en la nube -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">Cuenta y sincronización entre dispositivos</h3>
+              <p id="aj-cloud-status" class="text-xs text-gray-500">Inicia sesión con tu usuario en móvil y ordenador para mantener los datos sincronizados.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="aj-btn-sync-local" type="button" class="px-4 py-2 rounded-xl border border-[#B6BEB2] bg-[#F5F7F4] hover:bg-[#EAEEE9] text-gray-900 text-sm font-semibold cursor-pointer">☁️ Subir datos locales a la nube</button>
+              <button id="aj-btn-logout" type="button" class="hidden px-4 py-2 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold cursor-pointer">Cerrar sesión</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Copia de seguridad JSON -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">Copia de seguridad completa (.json)</h3>
+              <p class="text-xs text-gray-500">Exporta todos tus artículos, variantes, pedidos, clientes, facturas y ajustes en un único archivo o restaura una copia anterior.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="aj-btn-backup-export" type="button" class="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-sm font-semibold cursor-pointer">⬇ Descargar copia (.json)</button>
+              <label class="px-4 py-2 rounded-xl border border-[#B6BEB2] bg-[#F5F7F4] hover:bg-[#EAEEE9] text-gray-900 text-sm font-semibold cursor-pointer">
+                ⬆ Restaurar copia (.json)
+                <input id="aj-backup-import-input" type="file" accept=".json,application/json" class="hidden" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== NAVEGACIÓN INFERIOR MÓVIL ==================== -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-30 grid grid-cols-6 h-16 text-[10px] font-medium">
+    <button type="button" data-nav="stock" class="nav-btn-mob relative flex flex-col items-center justify-center gap-0.5 cursor-pointer">
+      <span>📦</span><span>Stock</span>
+      <span class="nav-stock-badge hidden absolute top-1 right-2 px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-red-600 text-white">0</span>
+    </button>
+    <button type="button" data-nav="pedidos" class="nav-btn-mob flex flex-col items-center justify-center gap-0.5 cursor-pointer"><span>🛍️</span><span>Pedidos</span></button>
+    <button type="button" data-nav="clientes" class="nav-btn-mob flex flex-col items-center justify-center gap-0.5 cursor-pointer"><span>👥</span><span>Clientes</span></button>
+    <button type="button" data-nav="proveedores" class="nav-btn-mob flex flex-col items-center justify-center gap-0.5 cursor-pointer"><span>🚚</span><span>Proveed.</span></button>
+    <button type="button" data-nav="balances" class="nav-btn-mob flex flex-col items-center justify-center gap-0.5 cursor-pointer"><span>📊</span><span>Balances</span></button>
+    <button type="button" data-nav="ajustes" class="nav-btn-mob flex flex-col items-center justify-center gap-0.5 cursor-pointer"><span>⚙️</span><span>Ajustes</span></button>
+  </nav>
+
+  <!-- ==================== TOASTS & COMBOBOX FLOTANTE ==================== -->
+  <div id="toast-container" class="fixed top-4 right-4 z-[120] space-y-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+  <div id="babyluc-combo-menu" class="hidden fixed z-[140] bg-white border border-gray-300 rounded-xl shadow-2xl max-h-60 overflow-y-auto py-1 text-xs"></div>
+
+  <!-- ==================== MODALES ==================== -->
+  <!-- Modal Artículo (Stock) -->
+  <div id="modal-articulo" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h3 id="mart-title" class="text-lg font-bold text-gray-900">Detalle de artículo</h3>
+        <button id="mart-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold cursor-pointer">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
+          <div class="sm:col-span-4"><label class="block text-xs font-semibold text-gray-600 mb-1">Nombre *</label><input id="mart-nombre" type="text" class="w-full px-3.5 py-2 border border-gray-300 rounded-xl" /></div>
+          <div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">Código artículo (SKU)</label><input id="mart-codigo" type="text" placeholder="Ej: 16073 o REF-01" class="w-full px-3.5 py-2 border border-gray-300 rounded-xl font-mono text-xs" /></div>
+          <div class="sm:col-span-6">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Aliases</label>
+            <div id="mart-aliases-list" class="flex flex-wrap gap-1.5 mb-2"></div>
+            <div class="flex gap-2">
+              <input id="mart-alias-input" type="text" placeholder="Añadir alias..." class="flex-1 px-3 py-1.5 border border-gray-300 rounded-xl text-xs" />
+              <button id="mart-alias-add" type="button" class="px-3 py-1.5 rounded-xl bg-gray-900 text-white text-xs cursor-pointer">+ Añadir</button>
+            </div>
+          </div>
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Categoría</label>
+            <div class="flex gap-1.5">
+              <input id="mart-cat-input" list="dl-categorias" placeholder="Escribe o elige..." class="w-full px-3 py-2 border border-gray-300 rounded-xl" />
+              <button id="mart-cat-quick" type="button" title="Crear categoría" class="px-3 py-2 rounded-xl border border-gray-300 bg-gray-50 hover:bg-gray-100 text-xs font-bold cursor-pointer">+</button>
+            </div>
+          </div>
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Proveedor</label>
+            <input id="mart-prov-input" list="dl-proveedores" placeholder="Escribe o elige..." class="w-full px-3 py-2 border border-gray-300 rounded-xl" />
+          </div>
+          <div class="sm:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Precio compra (€)</label><input id="mart-pcompra" type="number" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+          <div class="sm:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Precio venta (c/IVA €)</label><input id="mart-pventa" type="number" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo IVA</label>
+            <select id="mart-iva" class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white"><option value="21">21%</option></select>
+          </div>
+          <div class="sm:col-span-3"><label class="block text-xs font-semibold text-gray-600 mb-1">Umbral alerta personal (opcional)</label><input id="mart-umbral" type="number" min="0" placeholder="Global si vacío" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        </div>
+
+        <div class="space-y-2.5 pt-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 class="font-semibold text-gray-800">Combinaciones (Talla × Color) y Stock</h4>
+              <p id="mart-vars-summary" class="text-[11px] text-gray-500">1 combinación · Stock total: 0</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="mart-var-gen-toggle" type="button" class="px-3 py-1.5 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-xs font-semibold text-gray-700 cursor-pointer">⚡ Generador Talla × Color</button>
+              <button id="mart-var-add" type="button" class="px-3 py-1.5 rounded-lg bg-[#F5F7F4] border border-[#B6BEB2] hover:bg-[#EAEEE9] text-xs font-semibold text-gray-900 cursor-pointer">+ Añadir combinación</button>
+            </div>
+          </div>
+
+          <div id="mart-var-gen-panel" class="hidden p-3.5 rounded-xl bg-[#F5F7F4] border border-[#B6BEB2]/70 space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+              <div class="sm:col-span-5">
+                <label class="block text-[11px] font-semibold text-gray-700 mb-1">Tallas (separadas por coma)</label>
+                <input id="mart-gen-tallas" type="text" placeholder="Ej: 1m, 3m, 6m, 12m" class="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-xs" />
+              </div>
+              <div class="sm:col-span-4">
+                <label class="block text-[11px] font-semibold text-gray-700 mb-1">Colores (separados por coma)</label>
+                <input id="mart-gen-colores" type="text" placeholder="Ej: Blanco, Rosa, Azul" class="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-xs" />
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-[11px] font-semibold text-gray-700 mb-1">Stock inicial c/u</label>
+                <input id="mart-gen-stock" type="number" min="0" value="0" class="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-center" />
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="text-[11px] text-gray-600">Genera todas las combinaciones Talla × Color bajo este código sin duplicar las existentes.</p>
+              <button id="mart-gen-apply" type="button" class="px-3.5 py-1.5 rounded-lg bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold cursor-pointer">Generar combinaciones</button>
+            </div>
+          </div>
+
+          <div class="border border-gray-200 rounded-xl overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200 text-xs">
+              <thead class="bg-gray-50 uppercase text-gray-500"><tr><th class="px-3 py-2 text-left">Talla</th><th class="px-3 py-2 text-left">Color</th><th class="px-3 py-2 text-center">Stock propio</th><th class="px-3 py-2 text-center">Acción</th></tr></thead>
+              <tbody id="mart-vars-tbody" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-2">
+        <button id="mart-delete" type="button" class="hidden px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-medium cursor-pointer">Eliminar artículo</button>
+        <div class="flex gap-2 ml-auto">
+          <button id="mart-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 cursor-pointer">Cancelar</button>
+          <button id="mart-save" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <datalist id="dl-categorias"></datalist>
+  <datalist id="dl-proveedores"></datalist>
+
+  <!-- Modal Escanear Factura (Wizard 4 pasos) -->
+  <div id="modal-scan-factura" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div><h3 class="text-lg font-bold text-gray-900">Escanear factura de proveedor (IA)</h3><p id="scan-step-subtitle" class="text-xs text-gray-500">Paso 1 de 4 · Subir documento</p></div>
+        <button id="scan-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold cursor-pointer">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto flex-1 space-y-5 text-sm">
+        <!-- Paso 1 -->
+        <div id="scan-step-1" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="p-5 rounded-2xl border-2 border-dashed border-gray-300 hover:border-[#B6BEB2] text-center cursor-pointer bg-gray-50">
+              <span class="block text-2xl mb-1">📷</span>
+              <span class="font-semibold text-gray-800 block">Foto o imagen</span>
+              <input id="scan-input-img" type="file" accept="image/*" capture="environment" class="hidden" />
+            </label>
+            <label class="p-5 rounded-2xl border-2 border-dashed border-gray-300 hover:border-[#B6BEB2] text-center cursor-pointer bg-gray-50">
+              <span class="block text-2xl mb-1">📄</span>
+              <span class="font-semibold text-gray-800 block">Subir PDF</span>
+              <input id="scan-input-pdf" type="file" accept=".pdf,application/pdf" class="hidden" />
+            </label>
+          </div>
+          <div id="scan-preview-box" class="hidden text-center space-y-2">
+            <p id="scan-preview-info" class="hidden text-xs font-semibold text-gray-700"></p>
+            <img id="scan-preview-img" alt="Vista previa factura" class="max-h-72 mx-auto rounded-xl border border-gray-200 shadow-xs" />
+            <div id="scan-preview-pages" class="hidden flex flex-wrap justify-center gap-2 pt-1"></div>
+          </div>
+        </div>
+        <!-- Paso 2 -->
+        <div id="scan-step-2" class="hidden py-12 text-center space-y-4">
+          <div id="scan-spinner" class="space-y-3">
+            <div class="w-10 h-10 border-4 border-[#B6BEB2] border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p class="font-semibold text-gray-700">Analizando factura con Gemini...</p>
+          </div>
+          <div id="scan-error-box" class="hidden space-y-3">
+            <p id="scan-error-text" class="text-sm text-red-600 font-medium"></p>
+            <button id="scan-btn-retry" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] text-gray-900 font-semibold text-sm cursor-pointer">Reintentar extracción</button>
+          </div>
+        </div>
+        <!-- Paso 3 -->
+        <div id="scan-step-3" class="hidden space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div><label class="block text-xs font-semibold text-gray-600">Proveedor</label><input id="sc-prov-nombre" type="text" class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-xs" /></div>
+            <div><label class="block text-xs font-semibold text-gray-600">CIF</label><input id="sc-prov-cif" type="text" class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-xs" /></div>
+            <div><label class="block text-xs font-semibold text-gray-600">Nº Factura</label><input id="sc-num-factura" type="text" class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-xs" /></div>
+            <div><label class="block text-xs font-semibold text-gray-600">Fecha</label><input id="sc-fecha" type="date" class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-xs" /></div>
+          </div>
+          <div id="sc-estado-bar" class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-amber-50/70 border border-amber-200 px-3.5 py-2.5 rounded-xl text-xs">
+            <div class="flex flex-wrap items-center gap-2">
+              <label for="sc-estado" class="font-semibold text-gray-800">Estado de recepción:</label>
+              <select id="sc-estado" class="px-2.5 py-1.5 border border-amber-300 rounded-lg bg-white font-semibold text-gray-900">
+                <option value="pendiente_recibir" selected>📦 Pendiente de recibir (no suma stock aún)</option>
+                <option value="recibido">✅ Recibido (sumar al stock ahora)</option>
+              </select>
+            </div>
+            <p id="sc-estado-hint" class="text-[11px] text-amber-900">El stock se sumará cuando marques la factura como recibida en Proveedores.</p>
+          </div>
+          <div id="sc-dup-warning" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-medium"></div>
+          <div id="sc-pvp-rule-bar" class="flex flex-wrap items-center justify-between gap-2 bg-[#F5F7F4] border border-[#B6BEB2] px-3.5 py-2.5 rounded-xl text-xs">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-semibold text-gray-800">Regla PVP artículos nuevos:</span>
+              <label class="inline-flex items-center gap-1 text-gray-700">
+                <span>Coste ×</span>
+                <input id="sc-pvp-mult" type="number" step="0.05" min="1" value="2" class="w-16 px-2 py-1 border border-gray-300 rounded-lg bg-white text-center font-semibold" />
+              </label>
+              <label class="inline-flex items-center gap-1 text-gray-700">
+                <span>Redondeo:</span>
+                <select id="sc-pvp-round" class="px-2 py-1 border border-gray-300 rounded-lg bg-white">
+                  <option value="90">,90 €</option>
+                  <option value="95">,95 €</option>
+                  <option value="int">Entero (€)</option>
+                  <option value="none">Exacto</option>
+                </select>
+              </label>
+            </div>
+            <button id="sc-apply-pvp-rule" type="button" class="px-3 py-1.5 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 font-semibold text-gray-800 cursor-pointer">Recalcular PVP nuevos</button>
+          </div>
+          <div class="overflow-x-auto border border-gray-200 rounded-xl">
+            <table class="min-w-full divide-y divide-gray-200 text-xs">
+              <thead class="bg-gray-50 uppercase text-gray-500"><tr><th class="px-2 py-2 text-left min-w-[270px]">Artículo, Categoría y Alias</th><th class="px-2 py-2 text-left min-w-[210px]">Tallas / Colores</th><th class="px-2 py-2">Cant.</th><th class="px-2 py-2">P.Unit</th><th class="px-2 py-2">IVA%</th><th class="px-2 py-2">RE%</th><th class="px-2 py-2">Stock</th><th class="px-2 py-2"></th></tr></thead>
+              <tbody id="sc-lineas-tbody" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <button id="sc-add-linea" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-semibold cursor-pointer">+ Añadir fila</button>
+            <div id="sc-totales" class="text-xs text-gray-700 font-semibold"></div>
+          </div>
+          <datalist id="dl-scan-articulos"></datalist>
+          <datalist id="dl-scan-aliases"></datalist>
+          <datalist id="dl-scan-categorias"></datalist>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
+        <button id="scan-btn-back" type="button" class="hidden px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm cursor-pointer">← Atrás</button>
+        <div class="flex flex-wrap items-center gap-2 ml-auto">
+          <button id="scan-btn-save-no-stock" type="button" class="hidden px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 font-semibold text-sm cursor-pointer">Registrar sin afectar stock</button>
+          <button id="scan-btn-next" type="button" disabled class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] disabled:opacity-40 text-gray-900 font-semibold text-sm cursor-pointer">Continuar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cliente (Reutilizable por Clientes y Pedidos) -->
+  <div id="modal-cliente" class="hidden fixed inset-0 z-[65] bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 id="mcli-title" class="text-lg font-bold text-gray-900">Nuevo cliente</h3>
+        <button id="mcli-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold cursor-pointer">✕</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">Nombre completo</label><input id="mcli-nombre" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Teléfono</label><input id="mcli-tel" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Email</label><input id="mcli-email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">NIF / CIF (opcional)</label><input id="mcli-nif" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Ciudad</label><input id="mcli-ciudad" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Calle</label><input id="mcli-calle" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Código Postal</label><input id="mcli-cp" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">Notas</label><textarea id="mcli-notas" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-xl"></textarea></div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="mcli-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 cursor-pointer">Cancelar</button>
+        <button id="mcli-save" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Guardar cliente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pago Pedido -->
+  <div id="modal-pedido-pago" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-gray-900">Registrar pago</h3>
+        <button id="modal-pago-close" type="button" class="text-gray-400 hover:text-gray-700 text-lg font-bold cursor-pointer">✕</button>
+      </div>
+      <p class="text-sm text-gray-500">Elige el método de pago para marcar como <strong>Pagado</strong> y emitir factura:</p>
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" data-pay-method="bizum" class="pay-method-btn py-3 px-2 rounded-xl border-2 border-gray-200 text-sm font-semibold cursor-pointer">Bizum</button>
+        <button type="button" data-pay-method="transferencia" class="pay-method-btn py-3 px-2 rounded-xl border-2 border-gray-200 text-sm font-semibold cursor-pointer">Transferencia</button>
+        <button type="button" data-pay-method="efectivo" class="pay-method-btn py-3 px-2 rounded-xl border-2 border-gray-200 text-sm font-semibold cursor-pointer">Efectivo</button>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="modal-pago-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 cursor-pointer">Cancelar</button>
+        <button id="modal-pago-confirm" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Confirmar pago</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cerrar Bolsa y Enviar -->
+  <div id="modal-cerrar-bolsa" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-start justify-between">
+        <div>
+          <h3 id="mbolsa-title" class="text-lg font-bold text-gray-900">Cerrar bolsa y enviar</h3>
+          <p id="mbolsa-subtitle" class="text-xs text-gray-500"></p>
+        </div>
+        <button id="mbolsa-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold px-2 cursor-pointer">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-sm">
+        <div>
+          <p class="text-xs font-semibold text-gray-600 uppercase mb-2">Pedidos incluidos en esta bolsa</p>
+          <div id="mbolsa-pedidos-list" class="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden bg-white"></div>
+        </div>
+
+        <div id="mbolsa-porte-box" class="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-2.5">
+          <div id="mbolsa-porte-ya-existe" class="hidden text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2"></div>
+          <div id="mbolsa-porte-selector-wrap" class="space-y-2.5">
+            <label class="flex items-center gap-2 text-xs font-semibold text-gray-800 cursor-pointer">
+              <input id="mbolsa-add-porte-chk" type="checkbox" checked class="w-4 h-4 accent-[#B6BEB2]" />
+              🚚 Añadir porte único a la bolsa antes de enviar
+            </label>
+            <div id="mbolsa-porte-inputs" class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+              <select id="mbolsa-porte-select" class="sm:col-span-5 px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg"></select>
+              <input id="mbolsa-porte-nombre" type="text" placeholder="Concepto porte" class="sm:col-span-4 px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg" />
+              <input id="mbolsa-porte-precio" type="number" min="0" step="0.01" placeholder="0.00 €" class="sm:col-span-3 px-2.5 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-right" />
+            </div>
+          </div>
+        </div>
+
+        <div id="mbolsa-pago-box" class="hidden p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2.5">
+          <label class="flex items-center gap-2 text-xs font-semibold text-amber-950 cursor-pointer">
+            <input id="mbolsa-marcar-pagado-chk" type="checkbox" class="w-4 h-4 accent-[#B6BEB2]" />
+            💳 Cobrar ahora lo pendiente (marca como Pagado y emite factura)
+          </label>
+          <div id="mbolsa-pay-methods" class="hidden grid grid-cols-3 gap-2">
+            <button type="button" data-bolsa-pay="bizum" class="bolsa-pay-btn py-2 px-2 rounded-xl border-2 border-gray-200 bg-white text-xs font-semibold cursor-pointer">Bizum</button>
+            <button type="button" data-bolsa-pay="transferencia" class="bolsa-pay-btn py-2 px-2 rounded-xl border-2 border-gray-200 bg-white text-xs font-semibold cursor-pointer">Transferencia</button>
+            <button type="button" data-bolsa-pay="efectivo" class="bolsa-pay-btn py-2 px-2 rounded-xl border-2 border-gray-200 bg-white text-xs font-semibold cursor-pointer">Efectivo</button>
+          </div>
+        </div>
+
+        <label class="flex items-center gap-2 p-3.5 rounded-xl bg-[#F5F7F4] border border-[#B6BEB2] text-xs font-semibold text-gray-900 cursor-pointer">
+          <input id="mbolsa-marcar-enviado-chk" type="checkbox" checked class="w-4 h-4 accent-[#B6BEB2]" />
+          📦 Cerrar la bolsa y marcar todos sus pedidos como Enviados
+        </label>
+
+        <div id="mbolsa-resumen-totales" class="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs space-y-1"></div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap gap-2">
+          <a id="mbolsa-btn-whatsapp" target="_blank" rel="noopener noreferrer" class="hidden px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold">💬 WhatsApp resumen</a>
+          <button id="mbolsa-btn-albaran" type="button" class="px-3.5 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold cursor-pointer">📄 Albarán combinado</button>
+        </div>
+        <div class="flex gap-2 ml-auto">
+          <button id="mbolsa-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 cursor-pointer">Cancelar</button>
+          <button id="mbolsa-confirm" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-bold text-sm cursor-pointer">Confirmar y procesar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmación Genérico (ELIMINAR / CANCELAR / RESETEAR) -->
+  <div id="modal-pedido-confirm" class="hidden fixed inset-0 z-[75] bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <h3 id="modal-pconf-title" class="text-lg font-bold text-gray-900">Confirmar acción</h3>
+      <p id="modal-pconf-desc" class="text-sm text-gray-600"></p>
+      <div class="space-y-1">
+        <label id="modal-pconf-label" class="block text-xs font-semibold text-gray-700"></label>
+        <input id="modal-pconf-input" type="text" autocomplete="off" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl" />
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="modal-pconf-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 cursor-pointer">Volver</button>
+        <button id="modal-pconf-ok" type="button" class="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm cursor-pointer">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Albarán PNG -->
+  <div id="modal-doc-albaran" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div><h3 class="text-lg font-bold text-gray-900">Resumen visual del pedido</h3><p class="text-xs text-gray-500">Imagen PNG lista para compartir o descargar.</p></div>
+        <button id="modal-alb-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold px-2 cursor-pointer">✕</button>
+      </div>
+      <div class="p-4 bg-gray-100 overflow-y-auto flex-1 flex justify-center items-start">
+        <img id="alb-preview-img" alt="Vista previa del pedido" class="w-full max-w-md rounded-xl shadow-md border border-gray-200 bg-white" />
+      </div>
+      <div class="px-5 py-4 border-t border-gray-200 bg-white flex flex-wrap justify-end gap-2">
+        <a id="alb-btn-whatsapp" target="_blank" rel="noopener noreferrer" class="hidden px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-sm">💬 WhatsApp</a>
+        <button id="alb-btn-descargar" type="button" class="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 font-medium text-sm cursor-pointer">Descargar imagen</button>
+        <button id="alb-btn-compartir" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Compartir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle / Edición / Alta Manual Factura de Compra -->
+  <div id="modal-factura-compra" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h3 id="mfc-title" class="text-lg font-bold text-gray-900">Factura de compra</h3>
+          <p id="mfc-subtitle" class="text-xs text-gray-500">Consulta o corrige los importes registrados para Balances y RE.</p>
+        </div>
+        <button id="mfc-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold px-2 cursor-pointer">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">Proveedor</label><input id="mfc-proveedor" list="dl-proveedores" type="text" placeholder="Escribe o elige proveedor..." class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+          <div><label class="block text-xs font-semibold text-gray-600 mb-1">Fecha</label><input id="mfc-fecha" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+          <div class="sm:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">Nº Factura *</label><input id="mfc-numero" type="text" placeholder="Ej: F-2026-001" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Estado recepción</label>
+            <select id="mfc-estado" class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white">
+              <option value="pendiente_recibir">📦 Pendiente de recibir</option>
+              <option value="recibido">✅ Recibido</option>
+            </select>
+          </div>
+        </div>
+        <div id="mfc-recepcion-banner" class="hidden flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs">
+          <div class="text-amber-900">
+            <p class="font-semibold">Pedido pendiente de llegada</p>
+            <p id="mfc-stock-status" class="text-[11px] text-amber-800">El stock de esta factura todavía no se ha sumado al inventario.</p>
+          </div>
+          <button id="mfc-btn-recibir-ahora" type="button" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs cursor-pointer whitespace-nowrap">✓ Marcar recibido y sumar stock</button>
+        </div>
+        <div id="mfc-stock-info-row" class="hidden text-[11px] text-gray-500 px-1"></div>
+        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200 space-y-2.5">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div><label class="block text-[11px] font-semibold text-gray-600 mb-1">Base imp. (€)</label><input id="mfc-base" type="number" step="0.01" min="0" class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-right" /></div>
+            <div><label class="block text-[11px] font-semibold text-gray-600 mb-1">Cuota IVA (€)</label><input id="mfc-iva" type="number" step="0.01" min="0" class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-right" /></div>
+            <div><label class="block text-[11px] font-semibold text-gray-600 mb-1">Recargo Eq. (€)</label><input id="mfc-re" type="number" step="0.01" min="0" class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-right" /></div>
+            <div><label class="block text-[11px] font-semibold text-gray-600 mb-1">Total (€)</label><input id="mfc-total" type="number" step="0.01" min="0" class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg bg-white text-right font-bold" /></div>
+          </div>
+          <div class="flex justify-end">
+            <button id="mfc-calc-imp" type="button" class="text-[11px] font-semibold text-gray-700 hover:text-gray-900 underline cursor-pointer">Calcular IVA 21% + RE 5,2% desde Base</button>
+          </div>
+        </div>
+        <div id="mfc-articulos-wrap">
+          <p class="text-xs font-semibold text-gray-600 mb-1.5">Artículos registrados en la factura</p>
+          <div class="border border-gray-200 rounded-xl overflow-x-auto max-h-48 overflow-y-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-xs">
+              <thead class="bg-gray-50 text-gray-500 uppercase"><tr><th class="px-3 py-2 text-left">Descripción</th><th class="px-3 py-2">Talla/Color</th><th class="px-3 py-2 text-center">Cant.</th><th class="px-3 py-2 text-right">P.Unit</th></tr></thead>
+              <tbody id="mfc-articulos-tbody" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-2">
+        <button id="mfc-delete" type="button" class="px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-medium cursor-pointer">Eliminar factura</button>
+        <div class="flex gap-2 ml-auto">
+          <button id="mfc-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 cursor-pointer">Cancelar</button>
+          <button id="mfc-save" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Devolución Parcial -->
+  <div id="modal-pedido-devolucion" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Registrar devolución parcial</h3>
+          <p class="text-xs text-gray-500">Elige las unidades a devolver. Se repondrá stock y se ajustará la facturación.</p>
+        </div>
+        <button id="mdev-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold px-2 cursor-pointer">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-sm">
+        <div class="border border-gray-200 rounded-xl overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-xs">
+            <thead class="bg-gray-50 uppercase text-gray-500"><tr><th class="px-3 py-2 text-left">Artículo</th><th class="px-3 py-2 text-center">Disp.</th><th class="px-3 py-2 text-right">Precio</th><th class="px-3 py-2 text-center">Devolver</th></tr></thead>
+            <tbody id="mdev-lineas-tbody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+        <label class="inline-flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+          <input id="mdev-reponer-stock" type="checkbox" checked class="w-4 h-4 accent-[#B6BEB2]" />
+          Reponer automáticamente las unidades devueltas en el stock
+        </label>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Motivo / nota (opcional)</label>
+          <input id="mdev-nota" type="text" placeholder="Ej: Cambio de talla, tara..." class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm" />
+        </div>
+        <div class="p-3.5 rounded-xl bg-[#F5F7F4] border border-[#B6BEB2] flex items-center justify-between">
+          <span class="text-xs font-semibold text-gray-700 uppercase">Importe total a devolver</span>
+          <span id="mdev-total" class="text-xl font-bold text-gray-900">0,00 €</span>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+        <button id="mdev-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 cursor-pointer">Cancelar</button>
+        <button id="mdev-confirm" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Confirmar devolución</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Factura PDF -->
+  <div id="modal-doc-factura" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-start justify-between">
+        <div><p class="text-xs uppercase font-semibold text-gray-400">Documento fiscal</p><h3 id="fac-modal-titulo" class="text-xl font-bold text-gray-900">Factura FAC-</h3></div>
+        <button id="modal-fac-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold px-2 cursor-pointer">✕</button>
+      </div>
+      <div id="fac-modal-resumen" class="p-4 rounded-xl bg-gray-50 border border-gray-200 text-sm space-y-1.5"></div>
+      <p class="text-[11px] text-gray-500">Incluye desglose legal de IVA (21%) y régimen especial de recargo de equivalencia.</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="fac-btn-descargar" type="button" class="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 font-medium text-sm cursor-pointer">Descargar PDF</button>
+        <button id="fac-btn-compartir" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Compartir PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Exportar Lote de Facturas por Período -->
+  <div id="modal-lote-facturas" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-start justify-between">
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Exportar facturas por período</h3>
+          <p class="text-xs text-gray-500">Genera un único PDF con todas las facturas emitidas dentro del rango elegido.</p>
+        </div>
+        <button id="lote-fac-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold px-2 cursor-pointer">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-sm">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Atajos de período</label>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" data-lote-preset="mes" class="lote-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer">Este mes</button>
+            <button type="button" data-lote-preset="mes_ant" class="lote-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer">Mes anterior</button>
+            <button type="button" data-lote-preset="trimestre" class="lote-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer">Trimestre actual</button>
+            <button type="button" data-lote-preset="trim_ant" class="lote-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer">Trimestre anterior</button>
+            <button type="button" data-lote-preset="anio" class="lote-preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer">Este año</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="lote-fac-desde" class="block text-xs font-semibold text-gray-600 mb-1">Desde</label>
+            <input id="lote-fac-desde" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white" />
+          </div>
+          <div>
+            <label for="lote-fac-hasta" class="block text-xs font-semibold text-gray-600 mb-1">Hasta</label>
+            <input id="lote-fac-hasta" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white" />
+          </div>
+        </div>
+        <div class="space-y-2 pt-1">
+          <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+            <input id="lote-fac-portada" type="checkbox" checked class="w-4 h-4 accent-[#B6BEB2]" />
+            Incluir portada resumen con el listado de facturas y totales del período
+          </label>
+          <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+            <input id="lote-fac-incluir-rec" type="checkbox" checked class="w-4 h-4 accent-[#B6BEB2]" />
+            Incluir facturas rectificativas (REC-...) de devoluciones del período
+          </label>
+        </div>
+        <div id="lote-fac-resumen" class="p-4 rounded-xl bg-[#F5F7F4] border border-[#B6BEB2] text-xs space-y-1">
+          Calculando facturas del período...
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
+        <button id="lote-fac-csv" type="button" class="px-3.5 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-700 cursor-pointer">⬇ Listado CSV</button>
+        <div class="flex flex-wrap gap-2 ml-auto">
+          <button id="lote-fac-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 cursor-pointer">Cancelar</button>
+          <button id="lote-fac-share" type="button" class="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-sm font-medium text-gray-800 cursor-pointer">Compartir PDF</button>
+          <button id="lote-fac-download" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">⬇ Descargar PDF único</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Trimestre (Impuestos) -->
+  <div id="modal-trimestre-detalle" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2.5"><h3 id="tdet-titulo" class="text-xl font-bold text-gray-900">Trimestre</h3><span id="tdet-estado-badge" class="px-2.5 py-0.5 rounded-lg text-xs font-semibold"></span></div>
+          <p id="tdet-fechas" class="text-xs text-gray-500 mt-0.5"></p>
+        </div>
+        <button id="tdet-close" type="button" class="text-gray-400 hover:text-gray-700 text-xl font-bold px-2 cursor-pointer">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-5 text-sm">
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-3 py-2 text-left">Tipo IVA</th><th class="px-3 py-2 text-right">Base imponible</th><th class="px-3 py-2 text-right">Cuota IVA</th></tr></thead>
+            <tbody id="tdet-iva-tbody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+        <div class="p-4 rounded-xl bg-[#F5F7F4] border border-[#B6BEB2] flex items-center justify-between">
+          <span class="font-semibold text-gray-800">Total a ingresar en Hacienda (Modelo 303)</span>
+          <span id="tdet-total-303" class="text-2xl font-bold text-gray-900">0,00 €</span>
+        </div>
+        <div class="p-4 rounded-xl bg-gray-50 border border-dashed border-gray-300 space-y-2">
+          <p class="text-xs font-bold uppercase text-gray-600">RE pagado a proveedores (informativo)</p>
+          <div id="tdet-re-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
+        </div>
+        <div id="tdet-pago-info" class="hidden p-3 rounded-xl bg-green-50 border border-green-200 text-xs text-green-800"></div>
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between"><label class="text-xs font-semibold text-gray-700">Notas libres</label><button id="tdet-btn-save-notas" type="button" class="px-3 py-1 rounded-lg bg-gray-900 text-white text-xs cursor-pointer">Guardar notas</button></div>
+          <textarea id="tdet-notas" rows="2" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl"></textarea>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center gap-2">
+        <button id="tdet-btn-recalcular" type="button" class="px-3.5 py-2 rounded-xl border border-gray-300 bg-white text-xs font-medium cursor-pointer">↻ Recalcular</button>
+        <button id="tdet-btn-cambiar-estado" type="button" class="px-4 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Cambiar estado</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cambiar Estado Trimestre -->
+  <div id="modal-trimestre-estado" class="hidden fixed inset-0 z-[60] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between"><h3 class="text-lg font-bold text-gray-900">Estado del trimestre</h3><button id="test-cancel" type="button" class="text-gray-400 hover:text-gray-700 text-lg font-bold cursor-pointer">✕</button></div>
+      <div class="space-y-3 text-sm">
+        <select id="test-select" class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white"><option value="pendiente">🟡 Pendiente</option><option value="pagado">✅ Pagado</option><option value="aplazado">🔵 Aplazado</option></select>
+        <div id="test-fecha-wrap" class="hidden"><label class="block text-xs font-semibold text-gray-600 mb-1">Fecha de pago</label><input id="test-fecha-pago" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2"><button id="test-save" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] text-gray-900 font-semibold text-sm cursor-pointer">Guardar estado</button></div>
+    </div>
+  </div>
+
+  <!-- Modal PIN y Modal Proveedor (Ajustes) -->
+  <div id="modal-ajustes-pin" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between"><h3 class="text-lg font-bold text-gray-900">Configurar PIN (6 dígitos)</h3><button id="mpin-close" type="button" class="text-gray-400 hover:text-gray-700 text-lg font-bold cursor-pointer">✕</button></div>
+      <div class="space-y-3 text-sm">
+        <div id="mpin-actual-wrap" class="hidden"><label class="block text-xs font-semibold text-gray-600 mb-1">PIN actual</label><input id="mpin-actual" type="password" inputmode="numeric" maxlength="6" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Nuevo PIN (6 dígitos)</label><input id="mpin-nuevo" type="password" inputmode="numeric" maxlength="6" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Confirmar nuevo PIN</label><input id="mpin-confirm" type="password" inputmode="numeric" maxlength="6" class="w-full px-3 py-2 border border-gray-300 rounded-xl" /></div>
+      </div>
+      <div class="flex justify-end"><button id="mpin-save" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] text-gray-900 font-semibold text-sm cursor-pointer">Guardar PIN</button></div>
+    </div>
+  </div>
+
+  <div id="modal-ajustes-proveedor" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between"><h3 id="mprov-title" class="text-lg font-bold text-gray-900">Proveedor</h3><button id="mprov-close" type="button" class="text-gray-400 hover:text-gray-700 text-lg font-bold cursor-pointer">✕</button></div>
+      <div class="space-y-3 text-sm">
+        <input id="mprov-nombre" type="text" placeholder="Nombre comercial *" class="w-full px-3 py-2 border border-gray-300 rounded-xl" />
+        <input id="mprov-cif" type="text" placeholder="CIF / NIF" class="w-full px-3 py-2 border border-gray-300 rounded-xl" />
+        <input id="mprov-tel" type="text" placeholder="Teléfono" class="w-full px-3 py-2 border border-gray-300 rounded-xl" />
+        <input id="mprov-email" type="email" placeholder="Email" class="w-full px-3 py-2 border border-gray-300 rounded-xl" />
+        <textarea id="mprov-notas" rows="2" placeholder="Notas" class="w-full px-3 py-2 border border-gray-300 rounded-xl"></textarea>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button id="mprov-cancel" type="button" class="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 cursor-pointer">Cancelar</button>
+        <button id="mprov-save" type="button" class="px-5 py-2 rounded-xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-semibold text-sm cursor-pointer">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA PIN + BÚSQUEDA GLOBAL + SPINNER -->
+  <div id="pin-lock-screen" class="hidden fixed inset-0 z-[100] bg-[#F9FAFB] flex items-center justify-center p-4">
+    <div class="bg-white border border-gray-200 rounded-3xl max-w-sm w-full p-7 shadow-xl text-center space-y-5">
+      <div><span class="brand-logo text-3xl font-bold text-[#727D6E]">babyluc</span><p class="text-sm text-gray-500 mt-1">Introduce tu PIN de acceso (6 dígitos)</p></div>
+      <div id="pin-dots" class="flex justify-center gap-3 py-2">
+        <span class="pin-dot w-3.5 h-3.5 rounded-full border-2 border-gray-300 bg-white"></span><span class="pin-dot w-3.5 h-3.5 rounded-full border-2 border-gray-300 bg-white"></span><span class="pin-dot w-3.5 h-3.5 rounded-full border-2 border-gray-300 bg-white"></span><span class="pin-dot w-3.5 h-3.5 rounded-full border-2 border-gray-300 bg-white"></span><span class="pin-dot w-3.5 h-3.5 rounded-full border-2 border-gray-300 bg-white"></span><span class="pin-dot w-3.5 h-3.5 rounded-full border-2 border-gray-300 bg-white"></span>
+      </div>
+      <p id="pin-error-msg" class="text-xs font-medium text-red-600 min-h-[1rem]"></p>
+      <div id="pin-keypad" class="grid grid-cols-3 gap-2.5 max-w-[240px] mx-auto">
+        <button type="button" data-pin-key="1" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">1</button>
+        <button type="button" data-pin-key="2" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">2</button>
+        <button type="button" data-pin-key="3" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">3</button>
+        <button type="button" data-pin-key="4" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">4</button>
+        <button type="button" data-pin-key="5" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">5</button>
+        <button type="button" data-pin-key="6" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">6</button>
+        <button type="button" data-pin-key="7" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">7</button>
+        <button type="button" data-pin-key="8" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">8</button>
+        <button type="button" data-pin-key="9" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">9</button>
+        <button type="button" data-pin-key="clear" class="py-3 rounded-2xl bg-gray-100 text-xs font-semibold text-gray-600 cursor-pointer">Limpiar</button>
+        <button type="button" data-pin-key="0" class="py-3 rounded-2xl bg-gray-50 hover:bg-[#F5F7F4] border border-gray-200 text-lg font-bold cursor-pointer">0</button>
+        <button type="button" data-pin-key="back" class="py-3 rounded-2xl bg-gray-100 text-sm font-bold text-gray-700 cursor-pointer">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-global-search" class="hidden fixed inset-0 z-[80] bg-black/40 backdrop-blur-xs flex items-start justify-center p-4 sm:pt-16">
+    <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[82vh]">
+      <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+        <input id="global-search-input" type="text" autocomplete="off" placeholder="Buscar artículos, clientes o pedidos BLC-..." class="w-full text-sm focus:outline-none text-gray-800" />
+        <button id="global-search-close" type="button" class="text-gray-400 hover:text-gray-700 text-lg font-bold px-2 cursor-pointer">✕</button>
+      </div>
+      <div id="global-search-results" class="p-3 overflow-y-auto space-y-4 text-sm"></div>
+    </div>
+  </div>
+
+  <div id="global-async-spinner" class="hidden fixed inset-0 z-[95] bg-black/35 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl px-6 py-5 shadow-xl flex items-center gap-3 border border-gray-200">
+      <div class="w-5 h-5 border-2 border-[#727D6E] border-t-transparent rounded-full animate-spin"></div>
+      <span id="global-spinner-text" class="text-sm font-medium text-gray-800">Procesando...</span>
+    </div>
+  </div>
+
+  <!-- ==================== PANTALLA DE ACCESO SIMPLE ==================== -->
+  <div id="auth-gate-screen" class="hidden fixed inset-0 z-[110] bg-[#F9FAFB] flex items-center justify-center p-4">
+    <form id="auth-login-form" class="bg-white border border-gray-200 rounded-3xl max-w-sm w-full p-8 shadow-xl space-y-5">
+      <div class="text-center space-y-1">
+        <span class="brand-logo text-4xl font-bold text-[#727D6E] block">babyluc</span>
+        <h2 class="text-lg font-bold text-gray-900">Acceso a la tienda</h2>
+        <p class="text-xs text-gray-500">Introduce tu usuario y contraseña para sincronizar tus datos.</p>
+      </div>
+      <div id="auth-gate-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium"></div>
+      <div class="space-y-3 text-sm">
+        <div>
+          <label for="auth-username" class="block text-xs font-semibold text-gray-600 mb-1">Usuario</label>
+          <input id="auth-username" type="text" autocomplete="username" placeholder="admin" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+        </div>
+        <div>
+          <label for="auth-password" class="block text-xs font-semibold text-gray-600 mb-1">Contraseña</label>
+          <input id="auth-password" type="password" autocomplete="current-password" placeholder="••••••••" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B6BEB2]" />
+        </div>
+      </div>
+      <button id="auth-btn-submit" type="submit" class="w-full px-5 py-3 rounded-2xl bg-[#B6BEB2] hover:bg-[#A3ADA0] text-gray-900 font-bold text-sm shadow-xs transition cursor-pointer">
+        Entrar
+      </button>
+    </form>
+  </div>
+
+  <!-- ==================== SCRIPTS DE LA APLICACIÓN ==================== -->
+  <script type="module" src="/src/main.tsx"></script>
+  <script src="/babyluc-app.js"></script>
+</body>
+</html>

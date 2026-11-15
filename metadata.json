@@ -1,0 +1,6 @@
+{
+  "name": "babyluc",
+  "description": "Gestión integral para tienda de ropa de bebé, niño y mujer: stock, escaneo de facturas, clientes, pedidos, albaranes, facturas PDF y balances con Modelo 303.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

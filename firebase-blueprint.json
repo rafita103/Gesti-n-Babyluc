@@ -1,0 +1,270 @@
+{
+  "entities": {
+    "EmpresaConfig": {
+      "title": "EmpresaConfig",
+      "description": "Configuración única de la tienda babyluc.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number", "description": "ID fijo 1" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "nombre": { "type": "string", "maxLength": 150 },
+        "cif": { "type": "string", "maxLength": 40 },
+        "direccion": { "type": "string", "maxLength": 300 },
+        "telefono": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 150 },
+        "logo": { "type": "string", "maxLength": 700000 },
+        "mensajeAlbaran": { "type": "string", "maxLength": 500 },
+        "ivaDefecto": { "type": "number" },
+        "pedidosPorPagina": { "type": "number" },
+        "umbralStockGlobal": { "type": "number" },
+        "pinHash": { "type": "string", "maxLength": 128 },
+        "pinActivo": { "type": "boolean" },
+        "ultimoNumeroPedido": { "type": "object" },
+        "ultimoNumeroFactura": { "type": "object" },
+        "tiposPortes": { "type": "array" },
+        "tallasCatalogo": { "type": "array" },
+        "coloresCatalogo": { "type": "array" },
+        "apiKeyGemini": { "type": "string", "maxLength": 200 },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "ownerId", "nombre"]
+    },
+    "Categoria": {
+      "title": "Categoria",
+      "description": "Categoría de artículos del catálogo.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "nombre": { "type": "string", "minLength": 1, "maxLength": 120 }
+      },
+      "required": ["id", "ownerId", "nombre"]
+    },
+    "Proveedor": {
+      "title": "Proveedor",
+      "description": "Proveedor de mercancía.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "nombre": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "CIF": { "type": "string", "maxLength": 40 },
+        "telefono": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 150 },
+        "notas": { "type": "string", "maxLength": 1000 },
+        "fechaCreacion": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerId", "nombre"]
+    },
+    "Articulo": {
+      "title": "Articulo",
+      "description": "Artículo de catálogo.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "codigo": { "type": "string", "maxLength": 80 },
+        "nombre": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "aliases": { "type": "array" },
+        "categoriaId": { "type": "number" },
+        "proveedorId": { "type": "number" },
+        "precioCompra": { "type": "number" },
+        "precioVenta": { "type": "number" },
+        "tipoIVA": { "type": "number" },
+        "umbralAlerta": { "type": "number" },
+        "activo": { "type": "boolean" },
+        "fechaCreacion": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerId", "nombre"]
+    },
+    "Variante": {
+      "title": "Variante",
+      "description": "Variante de talla y color de un artículo.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "articuloId": { "type": "number" },
+        "talla": { "type": "string", "maxLength": 60 },
+        "color": { "type": "string", "maxLength": 60 },
+        "stock": { "type": "number" }
+      },
+      "required": ["id", "ownerId", "articuloId", "talla", "color", "stock"]
+    },
+    "Cliente": {
+      "title": "Cliente",
+      "description": "Ficha de cliente.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "nombre": { "type": "string", "maxLength": 200 },
+        "telefono": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 150 },
+        "nif": { "type": "string", "maxLength": 40 },
+        "calle": { "type": "string", "maxLength": 200 },
+        "ciudad": { "type": "string", "maxLength": 100 },
+        "cp": { "type": "string", "maxLength": 20 },
+        "direccion": { "type": "string", "maxLength": 350 },
+        "notas": { "type": "string", "maxLength": 2000 },
+        "fechaCreacion": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerId"]
+    },
+    "Pedido": {
+      "title": "Pedido",
+      "description": "Pedido de venta.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "numero": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "clienteId": { "type": "number" },
+        "nombreCliente": { "type": "string", "maxLength": 200 },
+        "telefonoCliente": { "type": "string", "maxLength": 40 },
+        "fecha": { "type": "string", "maxLength": 64 },
+        "estado": { "type": "string", "enum": ["pendiente_pago", "pagado", "enviado", "completado", "cancelado"] },
+        "metodoPago": { "type": "string", "maxLength": 40 },
+        "numeroFactura": { "type": "string", "maxLength": 40 },
+        "fechaPago": { "type": "string", "maxLength": 64 },
+        "fechaEnvio": { "type": "string", "maxLength": 64 },
+        "fechaCompletado": { "type": "string", "maxLength": 64 },
+        "notas": { "type": "string", "maxLength": 2000 },
+        "descuentoTipo": { "type": "string", "maxLength": 10 },
+        "descuentoValor": { "type": "number" },
+        "gastosEnvio": { "type": "number" },
+        "enBolsa": { "type": "boolean" },
+        "bolsaId": { "type": "string", "maxLength": 80 },
+        "devoluciones": { "type": "array" },
+        "historialEstados": { "type": "array" }
+      },
+      "required": ["id", "ownerId", "numero", "estado"]
+    },
+    "LineaPedido": {
+      "title": "LineaPedido",
+      "description": "Línea de artículo dentro de un pedido.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "pedidoId": { "type": "number" },
+        "articuloId": { "type": "number" },
+        "varianteId": { "type": "number" },
+        "nombreArticulo": { "type": "string", "maxLength": 200 },
+        "descripcionVariante": { "type": "string", "maxLength": 150 },
+        "cantidad": { "type": "number" },
+        "precioUnitario": { "type": "number" },
+        "tipoIVA": { "type": "number" }
+      },
+      "required": ["id", "ownerId", "pedidoId", "nombreArticulo", "cantidad", "precioUnitario"]
+    },
+    "FacturaCompra": {
+      "title": "FacturaCompra",
+      "description": "Factura de compra a proveedor.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "proveedorId": { "type": "number" },
+        "nombreProveedor": { "type": "string", "maxLength": 200 },
+        "fecha": { "type": "string", "maxLength": 64 },
+        "numeroFactura": { "type": "string", "maxLength": 80 },
+        "baseImponible": { "type": "number" },
+        "cuotaIVA": { "type": "number" },
+        "recargoEquivalencia": { "type": "number" },
+        "total": { "type": "number" },
+        "estado": { "type": "string", "enum": ["pendiente_recibir", "recibido"] },
+        "fechaRecepcion": { "type": "string", "maxLength": 64 },
+        "stockAplicado": { "type": "boolean" },
+        "articulos": { "type": "array" }
+      },
+      "required": ["id", "ownerId", "numeroFactura"]
+    },
+    "RegistroIva": {
+      "title": "RegistroIva",
+      "description": "Registro trimestral del Modelo 303.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "trimestre": { "type": "number" },
+        "año": { "type": "number" },
+        "estado": { "type": "string", "enum": ["pendiente", "pagado", "aplazado"] },
+        "fechaGeneracion": { "type": "string", "maxLength": 64 },
+        "fechaPago": { "type": "string", "maxLength": 64 },
+        "notas": { "type": "string", "maxLength": 2000 },
+        "baseImponible": { "type": "number" },
+        "totalIVA": { "type": "number" },
+        "desgloseIVA": { "type": "object" },
+        "reInformativo": { "type": "object" }
+      },
+      "required": ["id", "ownerId", "trimestre", "año", "estado"]
+    },
+    "MovimientoStock": {
+      "title": "MovimientoStock",
+      "description": "Registro histórico de entradas y salidas de stock.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "fecha": { "type": "string", "maxLength": 64 },
+        "articuloId": { "type": "number" },
+        "varianteId": { "type": "number" },
+        "nombreArticulo": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "descripcionVariante": { "type": "string", "maxLength": 150 },
+        "tipo": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "delta": { "type": "number" },
+        "stockResultante": { "type": "number" },
+        "referencia": { "type": "string", "maxLength": 80 },
+        "nota": { "type": "string", "maxLength": 300 }
+      },
+      "required": ["id", "ownerId", "fecha", "nombreArticulo", "tipo", "delta"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/empresa/{docId}": {
+      "schema": { "$ref": "#/entities/EmpresaConfig" },
+      "description": "Configuración privada de la tienda del usuario."
+    },
+    "/users/{userId}/categorias/{docId}": {
+      "schema": { "$ref": "#/entities/Categoria" },
+      "description": "Categorías de artículos del usuario."
+    },
+    "/users/{userId}/proveedores/{docId}": {
+      "schema": { "$ref": "#/entities/Proveedor" },
+      "description": "Proveedores del usuario."
+    },
+    "/users/{userId}/articulos/{docId}": {
+      "schema": { "$ref": "#/entities/Articulo" },
+      "description": "Catálogo de artículos del usuario."
+    },
+    "/users/{userId}/variantes/{docId}": {
+      "schema": { "$ref": "#/entities/Variante" },
+      "description": "Variantes de artículos del usuario."
+    },
+    "/users/{userId}/clientes/{docId}": {
+      "schema": { "$ref": "#/entities/Cliente" },
+      "description": "Clientes del usuario (contiene PII aislada bajo su UID)."
+    },
+    "/users/{userId}/pedidos/{docId}": {
+      "schema": { "$ref": "#/entities/Pedido" },
+      "description": "Pedidos del usuario."
+    },
+    "/users/{userId}/lineasPedido/{docId}": {
+      "schema": { "$ref": "#/entities/LineaPedido" },
+      "description": "Líneas de pedido del usuario."
+    },
+    "/users/{userId}/facturas_compra/{docId}": {
+      "schema": { "$ref": "#/entities/FacturaCompra" },
+      "description": "Facturas de compra del usuario."
+    },
+    "/users/{userId}/registros_iva/{docId}": {
+      "schema": { "$ref": "#/entities/RegistroIva" },
+      "description": "Registros trimestrales de IVA del usuario."
+    },
+    "/users/{userId}/movimientos_stock/{docId}": {
+      "schema": { "$ref": "#/entities/MovimientoStock" },
+      "description": "Historial de movimientos de stock del usuario."
+    }
+  }
+}

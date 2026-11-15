@@ -1,0 +1,429 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==================== HELPERS ====================
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnerUser(userId) {
+      return isSignedIn()
+        && isValidId(userId)
+        && request.auth.uid == userId;
+    }
+
+    function isOptStr(data, field, maxLen) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isOptNum(data, field) {
+      return !(field in data) || data[field] == null || data[field] is number;
+    }
+
+    function isOptBool(data, field) {
+      return !(field in data) || data[field] == null || data[field] is bool;
+    }
+
+    function isOptMap(data, field) {
+      return !(field in data) || data[field] == null || data[field] is map;
+    }
+
+    function isOptList(data, field, maxLen) {
+      return !(field in data) || data[field] == null || (data[field] is list && data[field].size() <= maxLen);
+    }
+
+    // ==================== VALIDATION BLUEPRINTS ====================
+    function isValidEmpresa(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'nombre'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'nombre', 'cif', 'direccion', 'telefono', 'email',
+          'logo', 'mensajeAlbaran', 'ivaDefecto', 'pedidosPorPagina',
+          'umbralStockGlobal', 'pinHash', 'pinActivo', 'ultimoNumeroPedido',
+          'ultimoNumeroFactura', 'tiposPortes', 'tallasCatalogo', 'coloresCatalogo', 'apiKeyGemini', 'updatedAt'
+        ])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && data.nombre is string && data.nombre.size() <= 150
+        && isOptStr(data, 'cif', 40)
+        && isOptStr(data, 'direccion', 300)
+        && isOptStr(data, 'telefono', 40)
+        && isOptStr(data, 'email', 150)
+        && isOptStr(data, 'logo', 700000)
+        && isOptStr(data, 'mensajeAlbaran', 500)
+        && isOptNum(data, 'ivaDefecto')
+        && isOptNum(data, 'pedidosPorPagina')
+        && isOptNum(data, 'umbralStockGlobal')
+        && isOptStr(data, 'pinHash', 128)
+        && isOptBool(data, 'pinActivo')
+        && isOptMap(data, 'ultimoNumeroPedido')
+        && isOptMap(data, 'ultimoNumeroFactura')
+        && isOptList(data, 'tiposPortes', 100)
+        && (!( 'tiposPortes' in data ) || data.tiposPortes == null || data.tiposPortes.size() == 0 || data.tiposPortes[0] is map)
+        && isOptList(data, 'tallasCatalogo', 150)
+        && (!( 'tallasCatalogo' in data ) || data.tallasCatalogo == null || data.tallasCatalogo.size() == 0 || (data.tallasCatalogo[0] is string && data.tallasCatalogo[0].size() <= 40))
+        && isOptList(data, 'coloresCatalogo', 150)
+        && (!( 'coloresCatalogo' in data ) || data.coloresCatalogo == null || data.coloresCatalogo.size() == 0 || (data.coloresCatalogo[0] is string && data.coloresCatalogo[0].size() <= 40))
+        && isOptStr(data, 'apiKeyGemini', 200)
+        && isOptStr(data, 'updatedAt', 64);
+    }
+
+    function isValidCategoria(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'nombre'])
+        && data.keys().hasOnly(['id', 'ownerId', 'nombre'])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && data.nombre is string && data.nombre.size() >= 1 && data.nombre.size() <= 120;
+    }
+
+    function isValidProveedor(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'nombre'])
+        && data.keys().hasOnly(['id', 'ownerId', 'nombre', 'CIF', 'telefono', 'email', 'notas', 'fechaCreacion'])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && data.nombre is string && data.nombre.size() >= 1 && data.nombre.size() <= 150
+        && isOptStr(data, 'CIF', 40)
+        && isOptStr(data, 'telefono', 40)
+        && isOptStr(data, 'email', 150)
+        && isOptStr(data, 'notas', 1000)
+        && isOptStr(data, 'fechaCreacion', 64);
+    }
+
+    function isValidArticulo(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'nombre'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'codigo', 'nombre', 'aliases', 'categoriaId', 'proveedorId',
+          'precioCompra', 'precioVenta', 'tipoIVA', 'umbralAlerta', 'activo', 'fechaCreacion'
+        ])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && isOptStr(data, 'codigo', 80)
+        && data.nombre is string && data.nombre.size() >= 1 && data.nombre.size() <= 200
+        && isOptList(data, 'aliases', 50)
+        && (!( 'aliases' in data ) || data.aliases == null || data.aliases.size() == 0 || (data.aliases[0] is string && data.aliases[0].size() <= 120))
+        && isOptNum(data, 'categoriaId')
+        && isOptNum(data, 'proveedorId')
+        && isOptNum(data, 'precioCompra')
+        && isOptNum(data, 'precioVenta')
+        && isOptNum(data, 'tipoIVA')
+        && isOptNum(data, 'umbralAlerta')
+        && isOptBool(data, 'activo')
+        && isOptStr(data, 'fechaCreacion', 64);
+    }
+
+    function isValidVariante(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'articuloId', 'talla', 'color', 'stock'])
+        && data.keys().hasOnly(['id', 'ownerId', 'articuloId', 'talla', 'color', 'stock'])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && data.articuloId is number
+        && data.talla is string && data.talla.size() <= 60
+        && data.color is string && data.color.size() <= 60
+        && data.stock is number;
+    }
+
+    function isValidCliente(data) {
+      return data.keys().hasAll(['id', 'ownerId'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'nombre', 'telefono', 'email', 'nif',
+          'calle', 'ciudad', 'cp', 'direccion', 'notas', 'fechaCreacion'
+        ])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && isOptStr(data, 'nombre', 200)
+        && isOptStr(data, 'telefono', 40)
+        && isOptStr(data, 'email', 150)
+        && isOptStr(data, 'nif', 40)
+        && isOptStr(data, 'calle', 200)
+        && isOptStr(data, 'ciudad', 100)
+        && isOptStr(data, 'cp', 20)
+        && isOptStr(data, 'direccion', 350)
+        && isOptStr(data, 'notas', 2000)
+        && isOptStr(data, 'fechaCreacion', 64);
+    }
+
+    function isValidPedido(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'numero', 'estado'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'numero', 'clienteId', 'nombreCliente', 'telefonoCliente',
+          'fecha', 'estado', 'metodoPago', 'numeroFactura', 'fechaPago', 'fechaEnvio',
+          'fechaCompletado', 'notas', 'descuentoTipo', 'descuentoValor', 'gastosEnvio',
+          'enBolsa', 'bolsaId', 'devoluciones', 'historialEstados'
+        ])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && data.numero is string && data.numero.size() >= 1 && data.numero.size() <= 40
+        && data.estado in ['pendiente_pago', 'pagado', 'enviado', 'completado', 'cancelado']
+        && isOptNum(data, 'clienteId')
+        && isOptStr(data, 'nombreCliente', 200)
+        && isOptStr(data, 'telefonoCliente', 40)
+        && isOptStr(data, 'fecha', 64)
+        && isOptStr(data, 'metodoPago', 40)
+        && isOptStr(data, 'numeroFactura', 40)
+        && isOptStr(data, 'fechaPago', 64)
+        && isOptStr(data, 'fechaEnvio', 64)
+        && isOptStr(data, 'fechaCompletado', 64)
+        && isOptStr(data, 'notas', 2000)
+        && isOptStr(data, 'descuentoTipo', 10)
+        && isOptNum(data, 'descuentoValor')
+        && isOptNum(data, 'gastosEnvio')
+        && isOptBool(data, 'enBolsa')
+        && isOptStr(data, 'bolsaId', 80)
+        && isOptList(data, 'devoluciones', 50)
+        && (!( 'devoluciones' in data ) || data.devoluciones == null || data.devoluciones.size() == 0 || data.devoluciones[0] is map)
+        && isOptList(data, 'historialEstados', 100)
+        && (!( 'historialEstados' in data ) || data.historialEstados == null || data.historialEstados.size() == 0 || data.historialEstados[0] is map);
+    }
+
+    function isValidLineaPedido(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'pedidoId', 'nombreArticulo', 'cantidad', 'precioUnitario'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'pedidoId', 'articuloId', 'varianteId',
+          'nombreArticulo', 'descripcionVariante', 'cantidad', 'precioUnitario', 'tipoIVA'
+        ])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && data.pedidoId is number
+        && isOptNum(data, 'articuloId')
+        && isOptNum(data, 'varianteId')
+        && data.nombreArticulo is string && data.nombreArticulo.size() <= 200
+        && isOptStr(data, 'descripcionVariante', 150)
+        && data.cantidad is number
+        && data.precioUnitario is number
+        && isOptNum(data, 'tipoIVA');
+    }
+
+    function isValidFacturaCompra(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'numeroFactura'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'proveedorId', 'nombreProveedor', 'fecha',
+          'numeroFactura', 'baseImponible', 'cuotaIVA', 'recargoEquivalencia', 'total',
+          'estado', 'fechaRecepcion', 'stockAplicado', 'articulos'
+        ])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && isOptNum(data, 'proveedorId')
+        && isOptStr(data, 'nombreProveedor', 200)
+        && isOptStr(data, 'fecha', 64)
+        && data.numeroFactura is string && data.numeroFactura.size() >= 1 && data.numeroFactura.size() <= 80
+        && isOptNum(data, 'baseImponible')
+        && isOptNum(data, 'cuotaIVA')
+        && isOptNum(data, 'recargoEquivalencia')
+        && isOptNum(data, 'total')
+        && (!('estado' in data) || data.estado == null || data.estado in ['pendiente_recibir', 'recibido'])
+        && isOptStr(data, 'fechaRecepcion', 64)
+        && isOptBool(data, 'stockAplicado')
+        && isOptList(data, 'articulos', 200)
+        && (!( 'articulos' in data ) || data.articulos == null || data.articulos.size() == 0 || data.articulos[0] is map);
+    }
+
+    function isValidRegistroIva(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'trimestre', 'año', 'estado'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'trimestre', 'año', 'estado', 'fechaGeneracion',
+          'fechaPago', 'notas', 'baseImponible', 'totalIVA', 'desgloseIVA', 'reInformativo'
+        ])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && data.trimestre is number
+        && data['año'] is number
+        && data.estado in ['pendiente', 'pagado', 'aplazado']
+        && isOptStr(data, 'fechaGeneracion', 64)
+        && isOptStr(data, 'fechaPago', 64)
+        && isOptStr(data, 'notas', 2000)
+        && isOptNum(data, 'baseImponible')
+        && isOptNum(data, 'totalIVA')
+        && isOptMap(data, 'desgloseIVA')
+        && isOptMap(data, 'reInformativo');
+    }
+
+    function isValidMovimientoStock(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'fecha', 'nombreArticulo', 'tipo', 'delta'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'fecha', 'articuloId', 'varianteId', 'nombreArticulo',
+          'descripcionVariante', 'tipo', 'delta', 'stockResultante', 'referencia', 'nota'
+        ])
+        && data.id is number
+        && data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() <= 128
+        && data.fecha is string && data.fecha.size() >= 1 && data.fecha.size() <= 64
+        && isOptNum(data, 'articuloId')
+        && isOptNum(data, 'varianteId')
+        && data.nombreArticulo is string && data.nombreArticulo.size() >= 1 && data.nombreArticulo.size() <= 200
+        && isOptStr(data, 'descripcionVariante', 150)
+        && data.tipo is string && data.tipo.size() >= 1 && data.tipo.size() <= 40
+        && data.delta is number
+        && isOptNum(data, 'stockResultante')
+        && isOptStr(data, 'referencia', 80)
+        && isOptStr(data, 'nota', 300);
+    }
+
+    // ==================== USER TENANT COLLECTIONS ====================
+    match /users/{userId} {
+      allow read, write: if false;
+
+      match /empresa/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidEmpresa(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidEmpresa(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'nombre', 'cif', 'direccion', 'telefono', 'email', 'logo', 'mensajeAlbaran',
+            'ivaDefecto', 'pedidosPorPagina', 'umbralStockGlobal', 'pinHash', 'pinActivo',
+            'ultimoNumeroPedido', 'ultimoNumeroFactura', 'tiposPortes', 'tallasCatalogo', 'coloresCatalogo', 'apiKeyGemini', 'updatedAt'
+          ]);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /categorias/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidCategoria(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidCategoria(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly(['nombre']);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /proveedores/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidProveedor(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidProveedor(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly(['nombre', 'CIF', 'telefono', 'email', 'notas']);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /articulos/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidArticulo(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidArticulo(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'codigo', 'nombre', 'aliases', 'categoriaId', 'proveedorId', 'precioCompra',
+            'precioVenta', 'tipoIVA', 'umbralAlerta', 'activo'
+          ]);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /variantes/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidVariante(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidVariante(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly(['articuloId', 'talla', 'color', 'stock']);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /clientes/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidCliente(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidCliente(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'nombre', 'telefono', 'email', 'nif', 'calle', 'ciudad', 'cp', 'direccion', 'notas'
+          ]);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /pedidos/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidPedido(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidPedido(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'clienteId', 'nombreCliente', 'telefonoCliente', 'estado', 'metodoPago',
+            'numeroFactura', 'fechaPago', 'fechaEnvio', 'fechaCompletado', 'notas',
+            'descuentoTipo', 'descuentoValor', 'gastosEnvio', 'enBolsa', 'bolsaId',
+            'devoluciones', 'historialEstados'
+          ]);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /lineasPedido/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidLineaPedido(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidLineaPedido(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'articuloId', 'varianteId', 'nombreArticulo', 'descripcionVariante', 'cantidad', 'precioUnitario', 'tipoIVA'
+          ]);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /facturas_compra/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidFacturaCompra(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidFacturaCompra(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'proveedorId', 'nombreProveedor', 'fecha', 'numeroFactura',
+            'baseImponible', 'cuotaIVA', 'recargoEquivalencia', 'total',
+            'estado', 'fechaRecepcion', 'stockAplicado', 'articulos'
+          ]);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /registros_iva/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidRegistroIva(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidRegistroIva(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'estado', 'fechaGeneracion', 'fechaPago', 'notas',
+            'baseImponible', 'totalIVA', 'desgloseIVA', 'reInformativo'
+          ]);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+
+      match /movimientos_stock/{docId} {
+        allow get: if isOwnerUser(userId) && isValidId(docId);
+        allow list: if isOwnerUser(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwnerUser(userId) && isValidId(docId) && isValidMovimientoStock(incoming());
+        allow update: if isOwnerUser(userId) && isValidId(docId) && isValidMovimientoStock(incoming())
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'fecha', 'articuloId', 'varianteId', 'nombreArticulo', 'descripcionVariante',
+            'tipo', 'delta', 'stockResultante', 'referencia', 'nota'
+          ]);
+        allow delete: if isOwnerUser(userId) && isValidId(docId);
+      }
+    }
+  }
+}
